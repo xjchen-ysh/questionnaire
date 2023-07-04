@@ -29,8 +29,7 @@ def register_plugin_views(app: Flask):
                 getattr(importlib.import_module('plugins.' + plugin_folder), "event_init")(app)
             except AttributeError:  # 没有插件启用事件就不调用
                 pass
-            except BaseException as error:
-                return fail_api(msg="Crash a error! Info: " + str(error))
+                
             print(f" * Plugin: Loaded plugin: {plugin_info['plugin_name']} .")
         except BaseException as e:
             info = f" * Plugin: Crash a error when loading {plugin_info['plugin_name'] if len(plugin_info) != 0 else 'plugin'} :" + "\n"
