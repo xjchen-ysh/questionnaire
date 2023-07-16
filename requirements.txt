@@ -11,3 +11,4 @@ psutil
 Flask-Mail
 Pillow
 cryptography
+validators
