@@ -1,11 +1,13 @@
 import os
+import platform
 import re
 import sys
 import time
-import psutil
-import platform
 from datetime import datetime
+
+import psutil
 from flask import Blueprint, render_template, jsonify
+
 from applications.common.utils.rights import authorize
 
 bp = Blueprint('adminMonitor', __name__, url_prefix='/monitor')
@@ -29,9 +31,9 @@ def main():
     memory_information = psutil.virtual_memory()
     # 内存使用率
     memory_usage = memory_information.percent
-    memory_used = str(round(memory_information.used / 1024 / 1024))
-    memory_total = str(round(memory_information.total / 1024 / 1024))
-    memory_free = str(round(memory_information.free / 1024 / 1024))
+    memory_used: int = memory_information.used
+    memory_total: int = memory_information.total
+    memory_free: int = memory_information.free
     # 磁盘信息
 
     disk_partitions_list = []
@@ -43,9 +45,9 @@ def main():
             disk_partitions_dict = {
                 'device': i.device,
                 'fstype': i.fstype,
-                'total': str(round(a.total / 1024 / 1024)),
-                'used': str(round(a.used / 1024 / 1024)),
-                'free': str(round(a.free / 1024 / 1024)),
+                'total': a.total,
+                'used': a.used,
+                'free': a.free,
                 'percent': a.percent
             }
             disk_partitions_list.append(disk_partitions_dict)
@@ -58,22 +60,22 @@ def main():
 
     # 当前时间
     time_now = time.strftime('%H:%M:%S ', time.localtime(time.time()))
-    return render_template('system/monitor.html',
-                           hostname=hostname,
-                           system_version=system_version,
-                           python_version=python_version,
-                           cpus_percent=cpus_percent,
-                           memory_usage=memory_usage,
-                           cpu_count=cpu_count,
-                           memory_used=memory_used,
-                           memory_total=memory_total,
-                           memory_free=memory_free,
-                           boot_time=boot_time,
-                           up_time_format=up_time_format,
-                           disk_partitions_list=disk_partitions_list,
-                           time_now=time_now
-
-                           )
+    return render_template(
+        'system/monitor.html',
+        hostname=hostname,
+        system_version=system_version,
+        python_version=python_version,
+        cpus_percent=cpus_percent,
+        memory_usage=memory_usage,
+        cpu_count=cpu_count,
+        memory_used=memory_used,
+        memory_total=memory_total,
+        memory_free=memory_free,
+        boot_time=boot_time,
+        up_time_format=up_time_format,
+        disk_partitions_list=disk_partitions_list,
+        time_now=time_now
+    )
 
 
 # 图表 api
