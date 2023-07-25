@@ -1,3 +1,4 @@
+{% from 'system/common/memory.html' import memory_format %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -54,19 +55,19 @@
                             <div class="layui-col-md6 layui-col-sm6 layui-col-xs6">
                                 <div class="pear-card2">
                                     <div class="title">空闲内存</div>
-                                    <div class="count pear-text">{{ memory_free }}M</div>
+                                    <div class="count pear-text">{{ memory_format(memory_free) }}</div>
                                 </div>
                             </div>
                             <div class="layui-col-md6 layui-col-sm6 layui-col-xs6">
                                 <div class="pear-card2">
                                     <div class="title">最大内存</div>
-                                    <div class="count pear-text">{{ memory_total }}M</div>
+                                    <div class="count pear-text">{{ memory_format(memory_total) }}</div>
                                 </div>
                             </div>
                             <div class="layui-col-md6 layui-col-sm6 layui-col-xs6">
                                 <div class="pear-card2">
                                     <div class="title">已用内存</div>
-                                    <div class="count pear-text">{{ memory_used }}M</div>
+                                    <div class="count pear-text">{{ memory_format(memory_used) }}</div>
                                 </div>
                             </div>
                             <div class="layui-col-md6 layui-col-sm6 layui-col-xs6">
@@ -96,18 +97,18 @@
             <div class="layui-card-header">磁盘信息</div>
             <div class="layui-card-body">
                 <ul class="pear-card-status">
-                    {% for i in disk_partitions_list %}
+                    {% for disk in disk_partitions_list %}
                         <li>
-                            <p>{{ i.device }}</p>
-                            <p>{{ i.fstype }}</p>
-                            磁盘大小&nbsp;<span>{{ i.total }}M</span>&nbsp;&nbsp;
-                            空闲大小&nbsp;<span>{{ i.free }}M</span>&nbsp;&nbsp;
+                            <p>{{ disk.device }}</p>
+                            <p>{{ disk.fstype }}</p>
+                            磁盘大小: <span>{{ memory_format(disk.total) }}</span>&nbsp;&nbsp;
+                            空闲大小: <span>{{ memory_format(disk.free) }}</span>&nbsp;&nbsp;
                             <br/>
                             <br/>
-                            已经使用&nbsp;<span>{{ i.used }}M</span>&nbsp;&nbsp;
-                            使用概率&nbsp;<span>{{ i.percent }}%</span>
+                            已经使用: <span>{{ memory_format(disk.used) }}</span>&nbsp;&nbsp;
+                            使用率: <span>{{ disk.percent }}%</span>
                             <br/>
-                            <a href="javascript:;" data-id="1" class="pear-btn pear-btn-xs pear-btn-primary pear-reply">详情</a>
+                            <a href="javascript:0" data-id="1" class="pear-btn pear-btn-xs pear-btn-primary pear-reply">详情</a>
                         </li>
                     {% endfor %}
                 </ul>
