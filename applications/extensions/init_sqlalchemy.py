@@ -2,7 +2,8 @@ import datetime
 import os
 
 from flask import Flask, request
-from flask_sqlalchemy import SQLAlchemy, BaseQuery
+from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy.query import Query as BaseQuery
 from flask_marshmallow import Marshmallow
 from marshmallow import fields
 from marshmallow.validate import (
