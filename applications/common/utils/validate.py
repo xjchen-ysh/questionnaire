@@ -131,7 +131,7 @@ slug = validators.slug
     True
 '''
 
-truthy = validators.truthy
+#truthy = validators.truthy
 '''
 验证给定值不是错误值。
 '''
