@@ -44,7 +44,7 @@ source ./test_env/bin/activate
 
 ```shell
 # 使用 pip 安装必要模块（对于 master 分支）
-pip install -r requirement\requirement.txt
+pip install -r requirements.txt
 
 # 使用 pip 安装必要模块（对于 mini 分支）
 pip install -r requirement.txt
@@ -76,10 +76,10 @@ flask admin init
 #### 运行项目
 
 ```shell
-# linux
+# windows
 run.bat
 
-# windows
+# linux
 ./run.sh
 ```
 
