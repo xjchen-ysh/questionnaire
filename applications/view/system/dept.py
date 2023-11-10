@@ -108,7 +108,8 @@ def dis_enable():
 @authorize("system:dept:edit", log=True)
 def update():
     json = request.get_json(force=True)
-    id = json.get("deptId"),
+    #id = json.get("deptId"),
+    id = str_escape(json.get("deptId"))
     data = {
         "dept_name": validate.str_escape(json.get("deptName")),
         "sort": validate.str_escape(json.get("sort")),
