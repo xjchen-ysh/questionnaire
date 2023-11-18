@@ -59,6 +59,7 @@
         const initCaptchaImageTimer = (function () {
             let captchaImageTimer = null
             return function () {
+                clearInterval(captchaImageTimer)
                 captchaImageTimer = setInterval(function () {
                     refreshCaptchaImage()
                 }, 30 * 1000);
