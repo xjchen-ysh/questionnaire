@@ -43,6 +43,31 @@
         let popup = layui.popup;
         let captchaPath = "{{ url_for('system.passport.get_captcha') }}";
 
+        /**
+         * 刷新验证码函数
+         */
+        const refreshCaptchaImage = (function () {
+            let captchaImage = document.getElementById("captchaImage")
+            return function () {
+                captchaImage.src = captchaPath + "?" + Math.random()
+            }
+        })()
+
+        /**
+         * 立即刷新验证码并且每隔 30秒 刷新
+         */
+        const initCaptchaImageTimer = (function () {
+            let captchaImageTimer = null
+            return function () {
+                clearInterval(captchaImageTimer)
+                captchaImageTimer = setInterval(function () {
+                    refreshCaptchaImage()
+                }, 30 * 1000);
+                refreshCaptchaImage()
+            }
+        })()
+        initCaptchaImageTimer()
+
         form.on('submit(login)', function (data) {
             let loader = layer.load();
             let btn = button.load({elem: '.login'});
@@ -59,7 +84,7 @@
                             })
                         } else {
                             popup.failure(result.msg, function () {
-                                document.getElementById("captchaImage").src = captchaPath + "?" + Math.random();
+                                initCaptchaImageTimer()
                             });
                         }
                     })
@@ -67,13 +92,9 @@
             });
             return false;
         });
-
         $("#captchaImage").click(function () {
-            document.getElementById("captchaImage").src = captchaPath + "?" + Math.random();
+            initCaptchaImageTimer()
         });
-        setInterval(function () {
-            document.getElementById("captchaImage").src = captchaPath + "?" + Math.random();
-        }, 30 * 1000);
     })
 </script>
 <script>
