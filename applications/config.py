@@ -1,4 +1,7 @@
 import logging
+from datetime import timedelta
+
+
 # from urllib.parse import quote_plus as urlquote
 
 
@@ -47,7 +50,9 @@ class BaseConfig:
 
     # 默认日志等级
     LOG_LEVEL = logging.WARN
-    # flask-mail配置
+    """
+    flask-mail配置
+    """
     MAIL_SERVER = 'smtp.qq.com'
     MAIL_USE_TLS = False
     MAIL_USE_SSL = True
@@ -78,3 +83,13 @@ class BaseConfig:
     #    'testOracle': 'oracle+cx_oracle://test:123456@192.168.1.1:1521/test',
     #    'testSQLite': 'sqlite:///database.db
     # }
+    """
+    session
+    """
+
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+
+    SESSION_TYPE = "filesystem" # 默认使用文件系统来保存会话
+    SESSION_PERMANENT = False  # 会话是否持久化
+    SESSION_USE_SIGNER = True  # 是否对发送到浏览器上 session 的 cookie 值进行加密
+
