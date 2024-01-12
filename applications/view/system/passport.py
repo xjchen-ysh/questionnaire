@@ -9,8 +9,6 @@ from applications.models import User
 bp = Blueprint('passport', __name__, url_prefix='/passport')
 
 
-
-
 # 获取验证码
 @bp.get('/getCaptcha')
 def get_captcha():
@@ -33,6 +31,7 @@ def login_post():
     req = request.form
     username = req.get('username')
     password = req.get('password')
+    remember = bool(req.get('remember-me'))
     code = req.get('captcha').__str__().lower()
 
     if not username or not password or not code:
@@ -55,7 +54,7 @@ def login_post():
 
     if username == user.username and user.validate_password(password):
         # 登录
-        login_user(user)
+        login_user(user, remember=remember)
         # 记录登录日志
         login_log(request, uid=user.id, is_access=True)
         # 授权路由存入session
