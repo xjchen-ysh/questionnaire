@@ -1,17 +1,11 @@
-import shutil
-
 from flask import Flask
-from flask import Blueprint, render_template, request, jsonify, escape
-from applications.common.utils.http import table_api, fail_api, success_api
-import os
+from flask import Blueprint
 import json
 import traceback
 import importlib
-
-from applications.common.utils.rights import authorize
-
 plugin_bp = Blueprint('plugin', __name__, url_prefix='/plugin')
 PLUGIN_ENABLE_FOLDERS = []
+
 
 def register_plugin_views(app: Flask):
     global PLUGIN_ENABLE_FOLDERS
@@ -29,7 +23,7 @@ def register_plugin_views(app: Flask):
                 getattr(importlib.import_module('plugins.' + plugin_folder), "event_init")(app)
             except AttributeError:  # 没有插件启用事件就不调用
                 pass
-                
+
             print(f" * Plugin: Loaded plugin: {plugin_info['plugin_name']} .")
         except BaseException as e:
             info = f" * Plugin: Crash a error when loading {plugin_info['plugin_name'] if len(plugin_info) != 0 else 'plugin'} :" + "\n"
