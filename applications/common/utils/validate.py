@@ -1,6 +1,6 @@
 # xss过滤
 import validators
-from flask import escape
+from markupsafe import escape
 from validators import validator
 
 
