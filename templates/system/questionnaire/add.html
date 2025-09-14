@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>问卷管理</title>
+    {% include 'system/common/header.html' %}
+</head>
+<body>
+<form class="layui-form" action="">
+    <div class="mainBox">
+        <div class="main-container">
+            <div class="main-container">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">问卷标题</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="title" lay-verify="required" autocomplete="off" placeholder="请输入问卷标题"
+                               class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label">问卷描述</label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入问卷描述" name="description" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">问卷类型</label>
+                    <div class="layui-input-block">
+                        <select name="questionnaire_type" lay-verify="required">
+                            <option value="">请选择问卷类型</option>
+                            <option value="survey">调查</option>
+                            <option value="feedback">反馈</option>
+                            <option value="evaluation">评估</option>
+                            <option value="registration">报名</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">状态</label>
+                    <div class="layui-input-block">
+                        <input type="radio" name="status" value="0" title="草稿" checked>
+                        <input type="radio" name="status" value="1" title="发布">
+                        <input type="radio" name="status" value="2" title="停止">
+                        <input type="radio" name="status" value="3" title="归档">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">开始时间</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="start_time" id="start_time" placeholder="请选择开始时间" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">结束时间</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="end_time" id="end_time" placeholder="请选择结束时间" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">最大回答数</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="max_responses" autocomplete="off" placeholder="请输入最大回答数量（可选）"
+                               class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">允许匿名</label>
+                    <div class="layui-input-block">
+                        <input type="checkbox" name="allow_anonymous" value="1" title="允许匿名回答" checked>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">需要登录</label>
+                    <div class="layui-input-block">
+                        <input type="checkbox" name="require_login" value="1" title="需要登录才能回答">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">排序</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="sort_order" autocomplete="off" placeholder="请输入排序值" value="0"
+                               class="layui-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bottom">
+        <div class="button-container">
+            <button type="submit" class="pear-btn pear-btn-primary pear-btn-sm" lay-submit="" lay-filter="questionnaire-save">
+                <i class="layui-icon layui-icon-ok"></i>
+                提交
+            </button>
+            <button type="reset" class="pear-btn pear-btn-sm">
+                <i class="layui-icon layui-icon-refresh"></i>
+                重置
+            </button>
+        </div>
+    </div>
+</form>
+{% include 'system/common/footer.html' %}
+<script>
+  layui.use(['form', 'jquery', 'laydate'], function () {
+    let form = layui.form
+    let $ = layui.jquery
+    let laydate = layui.laydate
+
+    // 初始化时间选择器
+    laydate.render({
+      elem: '#start_time',
+      type: 'datetime',
+      format: 'yyyy-MM-dd HH:mm:ss',
+      value: new Date(new Date().setHours(0,0,0,0))
+    })
+
+    laydate.render({
+      elem: '#end_time',
+      type: 'datetime',
+      format: 'yyyy-MM-dd HH:mm:ss',
+      value: new Date(new Date().setHours(23,59,59,999))
+    })
+
+    form.on('submit(questionnaire-save)', function (data) {
+      $.ajax({
+        url: '/system/questionnaire/save',
+        data: JSON.stringify(data.field),
+        dataType: 'json',
+        contentType: 'application/json',
+        type: 'post',
+        success: function (result) {
+          if (result.success) {
+            layer.msg(result.msg, { icon: 1, time: 1000 }, function () {
+              // 刷新父页面表格数据
+              if (parent.layui && parent.layui.table) {
+                parent.layui.table.reload('questionnaire-table')
+              }
+              // 关闭弹窗
+              parent.layer.close(parent.layer.getFrameIndex(window.name))
+              // 兼容旧版本的render方法
+              if (typeof parent.render === 'function') {
+                parent.render()
+              }
+            })
+          } else {
+            layer.msg(result.msg, { icon: 2, time: 1000 })
+          }
+        }
+      })
+      return false
+    })
+  })
+</script>
+<script>
+</script>
+</body>
+</html>

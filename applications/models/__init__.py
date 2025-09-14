@@ -8,3 +8,5 @@ from .admin_role_power import role_power
 from .admin_user import User
 from .admin_user_role import user_role
 from .admin_mail import Mail
+from .questionnaire import Questionnaire, Question, QuestionOption
+from .questionnaire_response import QuestionnaireResponse, QuestionAnswer

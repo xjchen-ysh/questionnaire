@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>编辑问题</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <!-- Vue.js 3 -->
+    <script src="{{ url_for('static', filename='index/js/vue.global.js') }}"></script>
+    <!-- Naive UI -->
+    <script src="{{ url_for('static', filename='index/js/naiveui.js') }}"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .question-editor {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .editor-header {
+            background: #18a058;
+            color: white;
+            padding: 16px 24px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .editor-content {
+            padding: 24px;
+        }
+
+        .form-item {
+            margin-bottom: 20px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #fafafa;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .option-label {
+            min-width: 60px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .option-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <n-message-provider>
+        <div class="question-editor">
+            <div class="editor-header">
+                <n-icon size="20" style="margin-right: 8px; vertical-align: middle;">
+                    <svg viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                    </svg>
+                </n-icon>
+                编辑问题
+            </div>
+
+            <div class="editor-content">
+                <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" label-width="100px">
+                    <!-- 问题标题 -->
+                    <div class="form-item">
+                        <n-form-item label="问题标题" path="title">
+                            <n-input v-model:value="formData.title" placeholder="请输入问题标题" />
+                        </n-form-item>
+                    </div>
+
+                    <!-- 问题描述 -->
+                    <div class="form-item">
+                        <n-form-item label="问题描述" path="description">
+                            <n-input v-model:value="formData.description" type="textarea" placeholder="请输入问题描述"
+                                :rows="3" />
+                        </n-form-item>
+                    </div>
+
+                    <!-- 问题类型 -->
+                    <div class="form-item">
+                        <n-form-item label="问题类型" path="questionType">
+                            <n-select v-model:value="formData.questionType" placeholder="请选择问题类型"
+                                :options="questionTypeOptions" @update:value="handleQuestionTypeChange" />
+                        </n-form-item>
+                    </div>
+
+                    <!-- 是否必填 -->
+                    <div class="form-item">
+                        <n-form-item label="是否必填">
+                            <n-switch v-model:value="formData.isRequired">
+                                <template #checked>是</template>
+                                <template #unchecked>否</template>
+                            </n-switch>
+                        </n-form-item>
+                    </div>
+
+                    <!-- 排序 -->
+                    <div class="form-item">
+                        <n-form-item label="排序">
+                            <n-input-number v-model:value="formData.sortOrder" placeholder="排序号" :min="0" />
+                        </n-form-item>
+                    </div>
+
+                    <!-- 选项设置 -->
+                    <div v-if="showOptions" class="form-item">
+                        <n-form-item label="选项设置">
+                            <div style="width: 100%;">
+                                <div style="margin-bottom: 16px;">
+                                    <n-button type="primary" @click="addOption" size="small">
+                                        <template #icon>
+                                            <n-icon>
+                                                <svg viewBox="0 0 24 24">
+                                                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                                                </svg>
+                                            </n-icon>
+                                        </template>
+                                        添加选项
+                                    </n-button>
+                                    <n-text depth="3" style="margin-left: 12px; font-size: 12px;">
+                                        勾选"正确"可设置该选项为正确答案
+                                    </n-text>
+                                </div>
+
+                                <div v-for="(option, index) in formData.options" :key="option.id" class="option-item">
+                                    <div class="option-label">选项[[ index + 1 ]]</div>
+                                    <div style="flex: 1;">
+                                        <n-input v-model:value="option.text" placeholder="选项文本" size="small" />
+                                    </div>
+                                    <div style="width: 120px;">
+                                        <n-input v-model:value="option.value" placeholder="选项值" size="small" />
+                                    </div>
+                                    <div class="option-controls">
+                                        <n-checkbox v-model:checked="option.isCorrect" size="small">
+                                            正确
+                                        </n-checkbox>
+                                        <n-button type="error" size="small" @click="removeOption(index)"
+                                            :disabled="formData.options.length <= 1">
+                                            <template #icon>
+                                                <n-icon>
+                                                    <svg viewBox="0 0 24 24">
+                                                        <path fill="currentColor"
+                                                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                                    </svg>
+                                                </n-icon>
+                                            </template>
+                                        </n-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </n-form-item>
+                    </div>
+                </n-form>
+
+                <div class="actions">
+                    <n-button @click="handleCancel">取消</n-button>
+                    <n-button type="primary" @click="handleSave" :loading="saving">
+                        保存
+                    </n-button>
+                </div>
+            </div>
+        </div>
+        </n-message-provider>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, reactive, onMounted } = Vue;
+        const {
+            NForm, NFormItem, NInput, NSelect, NSwitch, NInputNumber,
+            NButton, NIcon, NText, NCheckbox, createDiscreteApi
+        } = naive;
+
+        const app = createApp({
+            delimiters: ['[[', ']]'],
+            setup() {
+
+                const { message, notification, dialog, loadingBar, modal } = createDiscreteApi(
+                ['message', 'dialog', 'notification', 'loadingBar', 'modal']
+                )
+                const formRef = ref(null);
+                const saving = ref(false);
+
+                // 从URL获取问卷ID或问题ID
+                const urlPath = window.location.pathname;
+                const pathParts = urlPath.split('/');
+                const isEditMode = pathParts.includes('edit');
+                const questionId = isEditMode ? pathParts[pathParts.length - 1] : null;
+                const questionnaireId = isEditMode ? null : pathParts[pathParts.length - 1];
+                
+                // 表单数据
+                const formData = reactive({
+                    id: null,
+                    questionnaireId: questionnaireId,
+                    title: '',
+                    description: '',
+                    questionType: '',
+                    isRequired: false,
+                    sortOrder: 0,
+                    options: [],
+                });
+
+                // 问题类型选项
+                const questionTypeOptions = [
+                    { label: '文本输入', value: 'text' },
+                    { label: '多行文本', value: 'textarea' },
+                    { label: '单选题', value: 'single_choice' },
+                    { label: '多选题', value: 'multiple_choice' },
+                    { label: '评分题', value: 'rating' }
+                ];
+
+                // 表单验证规则
+                const rules = {
+                    title: {
+                        required: true,
+                        message: '请输入问题标题',
+                        trigger: 'blur'
+                    },
+                    questionType: {
+                        required: true,
+                        message: '请选择问题类型',
+                        trigger: 'change'
+                    }
+                };
+
+                // 是否显示选项设置
+                const showOptions = computed(() => {
+                    return formData.questionType === 'single_choice' || formData.questionType === 'multiple_choice';
+                });
+
+                // 处理问题类型变化
+                const handleQuestionTypeChange = (value) => {
+                    if (value === 'single_choice' || value === 'multiple_choice') {
+                        if (formData.options.length === 0) {
+                            addOption();
+                        }
+                    }
+                };
+
+                // 添加选项
+                const addOption = () => {
+                    const newId = Math.max(...formData.options.map(o => o.id), 0) + 1;
+                    formData.options.push({
+                        id: newId,
+                        text: '',
+                        value: '',
+                        isCorrect: false
+                    });
+                };
+
+                // 删除选项
+                const removeOption = (index) => {
+                    if (formData.options.length > 1) {
+                        formData.options.splice(index, 1);
+                    }
+                };
+
+                // 保存
+                const handleSave = async () => {
+                    try {
+                        await formRef.value?.validate();
+                        saving.value = true;
+
+                        // 构建保存数据
+                        const saveData = {
+                            id: formData.id,
+                            questionnaire_id: formData.questionnaireId,
+                            title: formData.title,
+                            description: formData.description,
+                            question_type: formData.questionType,
+                            is_required: formData.isRequired,
+                            sort_order: formData.sortOrder
+                        };
+
+                        // 如果是选择题，添加选项数据
+                        if (showOptions.value) {
+                            saveData.options = formData.options
+                                .filter(option => option.text.trim())
+                                .map(option => ({
+                                    text: option.text,
+                                    value: option.value || option.text,
+                                    is_correct: option.isCorrect
+                                }));
+                        }
+
+                        console.log('保存数据:', saveData);
+
+                        // 调用API保存数据
+                        let response;
+                        if (saveData.id) {
+                            // 更新问题
+                            response = await fetch('/system/questionnaire/question/update', {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(saveData)
+                            });
+                        } else {
+                            // 新增问题
+                            response = await fetch('/system/questionnaire/question/save', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(saveData)
+                            });
+                        }
+
+                        const result = await response.json();
+                        if (result.success) {
+                            message.success(result.msg || '保存成功！');
+                            setTimeout(() => {
+                                if (window.parent && window.parent.layer) {
+                                    window.parent.layer.closeAll();
+                                    window.parent.location.reload();
+                                }
+                            }, 1000);
+                        } else {
+                            message.error(result.msg || '保存失败！');
+                        }
+
+                    } catch (error) {
+                        console.error('验证失败:', error);
+                        message.error('请检查表单数据');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                // 取消
+                const handleCancel = () => {
+                    if (window.parent && window.parent.layer) {
+                        window.parent.layer.closeAll();
+                    }
+                };
+
+                // 加载问题详情（编辑模式）
+                const loadQuestionDetail = async () => {
+                    if (!questionId) return;
+                    
+                    try {
+                        const response = await fetch(`/system/questionnaire/question/detail/${questionId}`);
+                        const result = await response.json();
+                        
+                        if (result.success && result.data) {
+                            const data = result.data;
+                            
+                            // 回填表单数据
+                            formData.id = data.id;
+                            formData.questionnaireId = data.questionnaire_id;
+                            formData.title = data.title;
+                            formData.description = data.description || '';
+                            formData.questionType = data.question_type;
+                            formData.isRequired = data.is_required;
+                            formData.sortOrder = data.sort_order;
+                            
+                            // 回填选项数据
+                            if (data.options && data.options.length > 0) {
+                                formData.options = data.options.map((option, index) => ({
+                                    id: option.id || index + 1,
+                                    text: option.text,
+                                    value: option.value,
+                                    isCorrect: option.is_correct || false
+                                }));
+                            } else {
+                                formData.options = [];
+                            }
+                        } else {
+                            message.error(result.msg || '加载问题详情失败');
+                        }
+                    } catch (error) {
+                        console.error('加载问题详情失败:', error);
+                        message.error('加载问题详情失败');
+                    }
+                };
+
+                // 页面初始化
+                onMounted(() => {
+                    if (isEditMode) {
+                        loadQuestionDetail();
+                    }
+                });
+
+                return {
+                    formRef,
+                    formData,
+                    rules,
+                    questionTypeOptions,
+                    showOptions,
+                    saving,
+                    handleQuestionTypeChange,
+                    addOption,
+                    removeOption,
+                    handleSave,
+                    handleCancel
+                };
+            }
+        });
+
+        app.use(naive);
+        app.mount('#app');
+    </script>
+</body>
+
+</html>
