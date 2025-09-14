@@ -35,7 +35,7 @@ class BaseConfig:
     # JSON配置
     JSON_AS_ASCII = False
 
-    SECRET_KEY = "pear-system-flask"
+    SECRET_KEY = "0.sj045eda1ps"
 
     # mysql 配置
     # MYSQL_USERNAME = "root"
