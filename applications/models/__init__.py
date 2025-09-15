@@ -10,3 +10,4 @@ from .admin_user_role import user_role
 from .admin_mail import Mail
 from .questionnaire import Questionnaire, Question, QuestionOption
 from .questionnaire_response import QuestionnaireResponse, QuestionAnswer
+from .user_notice import UserNotice, UserNoticeConfirm

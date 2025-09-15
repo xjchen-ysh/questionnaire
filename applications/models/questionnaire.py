@@ -13,7 +13,7 @@ class Questionnaire(db.Model):
     creator_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), comment='创建者ID')
     start_time = db.Column(db.DateTime, comment='开始时间')
     end_time = db.Column(db.DateTime, comment='结束时间')
-    max_responses = db.Column(db.Integer, comment='最大回答数量')
+    max_responses = db.Column(db.Integer, default=0, comment='最大回答数量')
     allow_anonymous = db.Column(db.Boolean, default=True, comment='允许匿名回答')
     require_login = db.Column(db.Boolean, default=False, comment='需要登录')
     sort_order = db.Column(db.Integer, default=0, comment='排序')
@@ -183,6 +183,7 @@ class QuestionOption(db.Model):
     sort_order = db.Column(db.Integer, default=0, comment='排序')
     is_other = db.Column(db.Boolean, default=False, comment='是否为其他选项')
     is_correct = db.Column(db.Boolean, default=False, comment='是否为正确答案')
+    allow_input = db.Column(db.Boolean, default=False, comment='是否允许用户输入自定义内容')
     create_at = db.Column(db.DateTime, default=datetime.datetime.now, comment='创建时间')
     
     def __repr__(self):

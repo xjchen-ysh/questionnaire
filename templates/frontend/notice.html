@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>{{ notice.title }} - 用户须知</title>
+    <meta name="description" content="{{ notice.title }}">
+    <meta name="keywords" content="用户须知,{{ notice.notice_type_text }}">
+    
+    <!-- 引入样式 -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            padding-bottom: 80px;
+        }
+        
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+            background: #fff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .header .meta {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .notice-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .notice-info .item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .notice-info .item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .notice-info .label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .notice-info .value {
+            color: #333;
+        }
+        
+        .notice-content {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .notice-content h1, .notice-content h2, .notice-content h3 {
+            margin: 20px 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .notice-content p {
+            margin-bottom: 15px;
+        }
+        
+        .notice-content ul, .notice-content ol {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .notice-content li {
+            margin-bottom: 8px;
+        }
+        
+        .attachment {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .attachment .icon {
+            font-size: 24px;
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+        
+        .attachment a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .confirm-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 750px;
+            margin: 0 auto;
+            z-index: 1000;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+        
+        .photo-upload {
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .photo-upload:hover {
+            border-color: #667eea;
+        }
+        
+        .photo-upload.dragover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+        
+        .photo-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .required {
+            color: #e74c3c;
+        }
+        
+        @media (max-width: 480px) {
+            .header {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 18px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .confirm-section {
+                margin: 10px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>{{ notice.title }}</h1>
+            <div class="meta">
+                {{ notice.notice_type_text }} · 版本 {{ notice.version }}
+                {% if notice.effective_date %}
+                · 生效时间: {{ notice.effective_date.strftime('%Y-%m-%d') }}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 内容区域 -->
+        <div class="content">
+            <!-- 须知信息 -->
+            <div class="notice-info">
+                <div class="item">
+                    <span class="label">须知类型:</span>
+                    <span class="value">{{ notice.notice_type_text }}</span>
+                </div>
+                <div class="item">
+                    <span class="label">版本号:</span>
+                    <span class="value">{{ notice.version }}</span>
+                </div>
+                {% if notice.effective_date %}
+                <div class="item">
+                    <span class="label">生效时间:</span>
+                    <span class="value">{{ notice.effective_date.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% endif %}
+                {% if notice.expiry_date %}
+                <div class="item">
+                    <span class="label">失效时间:</span>
+                    <span class="value">{{ notice.expiry_date.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% endif %}
+                <div class="item">
+                    <span class="label">是否必须确认:</span>
+                    <span class="value">{{ '是' if notice.is_required else '否' }}</span>
+                </div>
+            </div>
+            
+            <!-- 须知内容 -->
+            <div class="notice-content">
+                {{ notice.content | safe }}
+            </div>
+            
+            <!-- 附件下载 -->
+            {% if notice.attachment_path and notice.attachment_name %}
+            <div class="attachment">
+                <div class="icon">📎</div>
+                <a href="{{ notice.attachment_path }}" download="{{ notice.attachment_name }}">
+                    下载附件: {{ notice.attachment_name }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 确认区域 -->
+    {% if notice.is_required %}
+    <div class="confirm-section">
+        <div id="alertContainer"></div>
+        
+        <form id="confirmForm">
+            <div class="form-group">
+                <label for="phone">手机号码 <span class="required">*</span></label>
+                <input type="tel" id="phone" name="phone" placeholder="请输入您的手机号码" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="photo">上传照片 (可选)</label>
+                <div class="photo-upload" id="photoUpload">
+                    <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
+                    <div id="uploadText">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
+                        <div>点击或拖拽上传照片</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;">支持 PNG、JPG、JPEG、GIF 格式，最大 5MB</div>
+                    </div>
+                    <img id="photoPreview" class="photo-preview" style="display: none;">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="confirmBtn">
+                确认已阅读并同意
+            </button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            正在处理...
+        </div>
+    </div>
+    {% endif %}
+    
+    <script>
+        // 全局变量
+        const noticeId = {{ notice.id }};
+        let uploadedPhotoPath = '';
+        
+        // DOM 元素
+        const confirmForm = document.getElementById('confirmForm');
+        const phoneInput = document.getElementById('phone');
+        const photoInput = document.getElementById('photo');
+        const photoUpload = document.getElementById('photoUpload');
+        const photoPreview = document.getElementById('photoPreview');
+        const uploadText = document.getElementById('uploadText');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const loading = document.getElementById('loading');
+        const alertContainer = document.getElementById('alertContainer');
+        
+        // 显示提示信息
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+        
+        // 验证手机号
+        function validatePhone(phone) {
+            const pattern = /^1[3-9]\d{9}$/;
+            return pattern.test(phone);
+        }
+        
+        // 照片上传处理
+        photoUpload.addEventListener('click', () => {
+            photoInput.click();
+        });
+        
+        photoInput.addEventListener('change', handleFileSelect);
+        
+        // 拖拽上传
+        photoUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            photoUpload.classList.add('dragover');
+        });
+        
+        photoUpload.addEventListener('dragleave', () => {
+            photoUpload.classList.remove('dragover');
+        });
+        
+        photoUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            photoUpload.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+        
+        function handleFile(file) {
+            // 验证文件类型
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                showAlert('请选择 PNG、JPG、JPEG 或 GIF 格式的图片');
+                return;
+            }
+            
+            // 验证文件大小 (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert('文件大小不能超过 5MB');
+                return;
+            }
+            
+            // 显示预览
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                photoPreview.src = e.target.result;
+                photoPreview.style.display = 'block';
+                uploadText.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+            
+            // 上传文件
+            uploadPhoto(file);
+        }
+        
+        function uploadPhoto(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/upload/photo', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    uploadedPhotoPath = data.data.path;
+                    showAlert('照片上传成功', 'success');
+                } else {
+                    showAlert(data.msg || '照片上传失败');
+                    resetPhotoUpload();
+                }
+            })
+            .catch(error => {
+                console.error('上传错误:', error);
+                showAlert('照片上传失败，请重试');
+                resetPhotoUpload();
+            });
+        }
+        
+        function resetPhotoUpload() {
+            photoPreview.style.display = 'none';
+            uploadText.style.display = 'block';
+            photoInput.value = '';
+            uploadedPhotoPath = '';
+        }
+        
+        // 表单提交处理
+        if (confirmForm) {
+            confirmForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const phone = phoneInput.value.trim();
+                
+                // 验证手机号
+                if (!phone) {
+                    showAlert('请输入手机号码');
+                    return;
+                }
+                
+                if (!validatePhone(phone)) {
+                    showAlert('请输入正确的手机号码');
+                    return;
+                }
+                
+                // 显示加载状态
+                confirmForm.style.display = 'none';
+                loading.style.display = 'block';
+                
+                // 提交确认
+                const confirmData = {
+                    notice_id: noticeId,
+                    phone: phone,
+                    photo_path: uploadedPhotoPath,
+                    remark: ''
+                };
+                
+                fetch('/api/notice/confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(confirmData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('确认成功！感谢您的配合。', 'success');
+                        confirmBtn.textContent = '已确认';
+                        confirmBtn.disabled = true;
+                    } else {
+                        showAlert(data.msg || '确认失败，请重试');
+                        confirmForm.style.display = 'block';
+                        loading.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('确认错误:', error);
+                    showAlert('网络错误，请重试');
+                    confirmForm.style.display = 'block';
+                    loading.style.display = 'none';
+                });
+            });
+        }
+        
+        // 页面加载完成后检查是否已确认
+        document.addEventListener('DOMContentLoaded', () => {
+            // 可以在这里添加检查用户是否已确认的逻辑
+        });
+    </script>
+</body>
+</html>

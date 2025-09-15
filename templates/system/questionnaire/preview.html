@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ questionnaire.title }} - 问卷预览</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Vue.js 3 -->
+    <script src="{{ url_for('static', filename='index/js/vue.global.js') }}"></script>
+    <!-- Naive UI -->
+    <script src="{{ url_for('static', filename='index/js/naiveui.js') }}"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .preview-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .questionnaire-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .questionnaire-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .questionnaire-description {
+            font-size: 16px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        .questionnaire-content {
+            padding: 30px;
+        }
+        .question-item {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .question-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .question-required {
+            color: #ff4757;
+            margin-left: 4px;
+        }
+        .question-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .option-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .option-input {
+            margin-top: 2px;
+        }
+        .option-content {
+            flex: 1;
+        }
+        .option-text {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.4;
+        }
+        .custom-input {
+            margin-top: 8px;
+            width: 100%;
+        }
+        .text-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .text-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        .textarea-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            min-height: 100px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        .textarea-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        .submit-section {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid #e8e8e8;
+            background: #f9f9f9;
+        }
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="preview-container">
+            <!-- 问卷头部 -->
+            <div class="questionnaire-header">
+                <div class="questionnaire-title">{{ questionnaire.title }}</div>
+                {% if questionnaire.description %}
+                <div class="questionnaire-description">{{ questionnaire.description }}</div>
+                {% endif %}
+            </div>
+
+            <!-- 问卷内容 -->
+            <div class="questionnaire-content">
+                {% for question in questions %}
+                <div class="question-item">
+                    <div class="question-title">
+                        {{ loop.index }}. {{ question.title }}
+                        {% if question.is_required %}
+                        <span class="question-required">*</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if question.description %}
+                    <div class="question-description">{{ question.description }}</div>
+                    {% endif %}
+
+                    <!-- 单选题 -->
+                    {% if question.question_type == 'single_choice' %}
+                    <div class="question-options">
+                        {% for option in question.options %}
+                        <div class="option-item">
+                            <input type="radio" 
+                                   name="question_{{ question.id }}" 
+                                   value="{{ option.id }}"
+                                   class="option-input"
+                                   @change="handleOptionChange({{ question.id }}, {{ option.id }}, 'single')">
+                            <div class="option-content">
+                                <div class="option-text">{{ option.option_text }}</div>
+                                {% if option.allow_input %}
+                                <input type="text" 
+                                       class="custom-input text-input"
+                                       placeholder="请输入详细信息..."
+                                       v-model="customInputs['{{ question.id }}_{{ option.id }}']"
+                                       :disabled="!selectedOptions['{{ question.id }}'] || selectedOptions['{{ question.id }}'] !== '{{ option.id }}'">
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- 多选题 -->
+                    {% elif question.question_type == 'multiple_choice' %}
+                    <div class="question-options">
+                        {% for option in question.options %}
+                        <div class="option-item">
+                            <input type="checkbox" 
+                                   name="question_{{ question.id }}" 
+                                   value="{{ option.id }}"
+                                   class="option-input"
+                                   @change="handleOptionChange({{ question.id }}, {{ option.id }}, 'multiple')">
+                            <div class="option-content">
+                                <div class="option-text">{{ option.option_text }}</div>
+                                {% if option.allow_input %}
+                                <input type="text" 
+                                       class="custom-input text-input"
+                                       placeholder="请输入详细信息..."
+                                       v-model="customInputs['{{ question.id }}_{{ option.id }}']"
+                                       :disabled="!isOptionSelected({{ question.id }}, {{ option.id }})">
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- 文本题 -->
+                    {% elif question.question_type == 'text' %}
+                    <input type="text" 
+                           class="text-input"
+                           placeholder="请输入您的答案..."
+                           v-model="textAnswers['{{ question.id }}']"
+                           {% if question.is_required %}required{% endif %}>
+                    
+                    <!-- 长文本题 -->
+                    {% elif question.question_type == 'textarea' %}
+                    <textarea class="textarea-input"
+                              placeholder="请输入您的答案..."
+                              v-model="textAnswers['{{ question.id }}']"
+                              {% if question.is_required %}required{% endif %}></textarea>
+                    
+                    <!-- 数字题 -->
+                    {% elif question.question_type == 'number' %}
+                    <input type="number" 
+                           class="text-input"
+                           placeholder="请输入数字..."
+                           v-model="textAnswers['{{ question.id }}']"
+                           {% if question.is_required %}required{% endif %}>
+                    
+                    <!-- 日期题 -->
+                    {% elif question.question_type == 'date' %}
+                    <input type="date" 
+                           class="text-input"
+                           v-model="textAnswers['{{ question.id }}']"
+                           {% if question.is_required %}required{% endif %}>
+                    
+                    <!-- 评分题 -->
+                    {% elif question.question_type == 'rating' %}
+                    <div class="rating-options">
+                        {% for i in range(1, 6) %}
+                        <label style="margin-right: 15px; cursor: pointer;">
+                            <input type="radio" 
+                                   name="question_{{ question.id }}" 
+                                   value="{{ i }}"
+                                   v-model="textAnswers['{{ question.id }}']"
+                                   style="margin-right: 5px;">
+                            {{ i }}分
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="submit-section">
+                <button class="submit-btn" @click="submitQuestionnaire" :disabled="submitting">
+                    [[ submitting ? '提交中...' : '提交问卷' ]]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+
+        const app = createApp({
+            delimiters: ['[[', ']]'],
+            setup() {
+                // 响应式数据
+                const selectedOptions = reactive({}); // 存储选中的选项
+                const customInputs = reactive({}); // 存储自定义输入内容
+                const textAnswers = reactive({}); // 存储文本类问题的答案
+                const submitting = ref(false);
+
+                // 处理选项变化
+                const handleOptionChange = (questionId, optionId, type) => {
+                    if (type === 'single') {
+                        selectedOptions[questionId] = optionId.toString();
+                    } else if (type === 'multiple') {
+                        if (!selectedOptions[questionId]) {
+                            selectedOptions[questionId] = [];
+                        }
+                        const index = selectedOptions[questionId].indexOf(optionId.toString());
+                        if (index > -1) {
+                            selectedOptions[questionId].splice(index, 1);
+                        } else {
+                            selectedOptions[questionId].push(optionId.toString());
+                        }
+                    }
+                };
+
+                // 检查选项是否被选中（多选题用）
+                const isOptionSelected = (questionId, optionId) => {
+                    const selected = selectedOptions[questionId];
+                    return selected && selected.includes(optionId.toString());
+                };
+
+                // 提交问卷
+                const submitQuestionnaire = async () => {
+                    submitting.value = true;
+                    
+                    try {
+                        // 构建提交数据
+                        const answers = [];
+                        
+                        // 处理选择题答案
+                        Object.keys(selectedOptions).forEach(questionId => {
+                            const selectedOption = selectedOptions[questionId];
+                            if (selectedOption) {
+                                const customInputData = {};
+                                
+                                // 收集该问题的自定义输入
+                                Object.keys(customInputs).forEach(key => {
+                                    if (key.startsWith(questionId + '_') && customInputs[key]) {
+                                        const optionId = key.split('_')[1];
+                                        customInputData[optionId] = customInputs[key];
+                                    }
+                                });
+                                
+                                answers.push({
+                                    question_id: parseInt(questionId),
+                                    answer_option_ids: Array.isArray(selectedOption) ? selectedOption.join(',') : selectedOption,
+                                    custom_inputs: customInputData
+                                });
+                            }
+                        });
+                        
+                        // 处理文本题答案
+                        Object.keys(textAnswers).forEach(questionId => {
+                            if (textAnswers[questionId]) {
+                                answers.push({
+                                    question_id: parseInt(questionId),
+                                    answer_text: textAnswers[questionId]
+                                });
+                            }
+                        });
+                        
+                        console.log('提交数据:', answers);
+                        alert('问卷提交成功！（这是预览模式，实际不会保存数据）');
+                        
+                    } catch (error) {
+                        console.error('提交失败:', error);
+                        alert('提交失败，请重试');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                return {
+                    selectedOptions,
+                    customInputs,
+                    textAnswers,
+                    submitting,
+                    handleOptionChange,
+                    isOptionSelected,
+                    submitQuestionnaire
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

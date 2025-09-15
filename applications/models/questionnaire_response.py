@@ -102,6 +102,7 @@ class QuestionAnswer(db.Model):
     answer_text = db.Column(db.Text, comment='文本答案')
     answer_option_ids = db.Column(db.String(500), comment='选项ID列表(逗号分隔)')
     answer_value = db.Column(db.String(100), comment='答案值(评分等)')
+    option_custom_inputs = db.Column(db.JSON, comment='选项自定义输入内容(JSON格式,键为选项ID,值为输入内容)')
     create_at = db.Column(db.DateTime, default=datetime.datetime.now, comment='创建时间')
     
     def __repr__(self):
@@ -131,9 +132,21 @@ class QuestionAnswer(db.Model):
         options = QuestionOption.query.filter(QuestionOption.id.in_(option_ids)).all()
         return [option.option_text for option in options]
     
+    def get_custom_input(self, option_id):
+        """获取指定选项的自定义输入内容"""
+        if not self.option_custom_inputs:
+            return ''
+        return self.option_custom_inputs.get(str(option_id), '')
+    
+    def set_custom_input(self, option_id, input_text):
+        """设置指定选项的自定义输入内容"""
+        if not self.option_custom_inputs:
+            self.option_custom_inputs = {}
+        self.option_custom_inputs[str(option_id)] = input_text
+    
     def has_content(self):
         """是否有内容"""
-        return bool(self.answer_text or self.answer_option_ids or self.answer_value)
+        return bool(self.answer_text or self.answer_option_ids or self.answer_value or self.option_custom_inputs)
     
     def get_display_value(self):
         """获取显示值"""
@@ -141,14 +154,30 @@ class QuestionAnswer(db.Model):
             return self.answer_text
         elif self.answer_option_ids:
             option_texts = self.get_option_texts()
-            return ', '.join(option_texts)
+            display_parts = []
+            
+            # 获取选项信息以检查是否允许输入
+            from .questionnaire import QuestionOption
+            option_ids = self.get_option_ids()
+            options = QuestionOption.query.filter(QuestionOption.id.in_(option_ids)).all()
+            
+            for option in options:
+                text = option.option_text
+                # 如果选项允许输入且有自定义内容，则添加自定义内容
+                if option.allow_input:
+                    custom_input = self.get_custom_input(option.id)
+                    if custom_input:
+                        text += f'({custom_input})'
+                display_parts.append(text)
+            
+            return ', '.join(display_parts)
         elif self.answer_value:
             return self.answer_value
         else:
             return ''
     
     @staticmethod
-    def create_or_update(response_id, question_id, answer_data):
+    def create_or_update(response_id, question_id, answer_data, custom_inputs=None):
         """创建或更新答案"""
         answer = QuestionAnswer.query.filter_by(
             response_id=response_id,
@@ -169,5 +198,9 @@ class QuestionAnswer(db.Model):
             answer.set_option_ids(answer_data)
         elif isinstance(answer_data, (int, float)):
             answer.answer_value = str(answer_data)
+        
+        # 设置自定义输入内容
+        if custom_inputs:
+            answer.option_custom_inputs = custom_inputs
         
         return answer

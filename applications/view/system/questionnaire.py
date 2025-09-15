@@ -9,7 +9,11 @@ from applications.common.utils.validate import str_escape
 from applications.extensions import db
 from applications.models import Questionnaire, QuestionnaireResponse
 from applications.models.questionnaire import Question, QuestionOption
-from applications.schemas import QuestionnaireOutSchema, QuestionOutSchema, QuestionOptionOutSchema
+from applications.schemas import (
+    QuestionnaireOutSchema,
+    QuestionOutSchema,
+    QuestionOptionOutSchema,
+)
 
 bp = Blueprint("questionnaire", __name__, url_prefix="/questionnaire")
 
@@ -21,36 +25,52 @@ def main():
 
 
 @bp.get("/data")
-@authorize("system:questionnaire:data", log=True)
+@authorize("system:questionnaire:main", log=True)
 def data():
-    questionnaire_name = str_escape(request.args.get('questionnaire_name', type=str))
-    
+    questionnaire_name = str_escape(request.args.get("questionnaire_name", type=str))
+
     filters = []
     if questionnaire_name:
         filters.append(Questionnaire.title.contains(questionnaire_name))
-    query = Questionnaire.query.filter(*filters).order_by(Questionnaire.sort_order).layui_paginate()
+    query = (
+        Questionnaire.query.filter(*filters)
+        .order_by(Questionnaire.sort_order)
+        .layui_paginate()
+    )
 
     return table_api(
-        data=[{
-            'id': questionnaire.id,#
-            'title': questionnaire.title,
-            'description': questionnaire.description,
-            'questionnaire_type': questionnaire.questionnaire_type,
-            'type_text': questionnaire.type_text,
-            'status': questionnaire.status,
-            'status_text': questionnaire.status_text,
-            'start_time': questionnaire.start_time.strftime('%Y-%m-%d %H:%M:%S') if questionnaire.start_time else None,
-            'end_time': questionnaire.end_time.strftime('%Y-%m-%d %H:%M:%S') if questionnaire.end_time else None,
-            'max_responses': questionnaire.max_responses,
-            'allow_anonymous': questionnaire.allow_anonymous,
-            'require_login': questionnaire.require_login,
-            'sort_order': questionnaire.sort_order,
-            'response_count': questionnaire.response_count,
-            'question_count': questionnaire.question_count,
-            'create_at': questionnaire.create_at,
-            'update_at': questionnaire.update_at,
-        } for questionnaire in query.items],
-        count=query.total)
+        data=[
+            {
+                "id": questionnaire.id,  #
+                "title": questionnaire.title,
+                "description": questionnaire.description,
+                "questionnaire_type": questionnaire.questionnaire_type,
+                "type_text": questionnaire.type_text,
+                "status": questionnaire.status,
+                "status_text": questionnaire.status_text,
+                "start_time": (
+                    questionnaire.start_time.strftime("%Y-%m-%d %H:%M:%S")
+                    if questionnaire.start_time
+                    else None
+                ),
+                "end_time": (
+                    questionnaire.end_time.strftime("%Y-%m-%d %H:%M:%S")
+                    if questionnaire.end_time
+                    else None
+                ),
+                "max_responses": questionnaire.max_responses,
+                "allow_anonymous": questionnaire.allow_anonymous,
+                "require_login": questionnaire.require_login,
+                "sort_order": questionnaire.sort_order,
+                "response_count": questionnaire.response_count,
+                "question_count": questionnaire.question_count,
+                "create_at": questionnaire.create_at,
+                "update_at": questionnaire.update_at,
+            }
+            for questionnaire in query.items
+        ],
+        count=query.total,
+    )
 
 
 @bp.get("/add")
@@ -72,26 +92,26 @@ def tree():
 @authorize("system:questionnaire:add", log=True)
 def save():
     req_json = request.get_json(force=True)
-    
+
     # 处理时间字段
-    start_time = req_json.get('start_time')
-    end_time = req_json.get('end_time')
-    
+    start_time = req_json.get("start_time")
+    end_time = req_json.get("end_time")
+
     start_time_obj = None
     end_time_obj = None
-    
+
     if start_time:
         try:
-            start_time_obj = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+            start_time_obj = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError):
             return fail_api(msg="开始时间格式错误")
-    
+
     if end_time:
         try:
-            end_time_obj = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
+            end_time_obj = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError):
             return fail_api(msg="结束时间格式错误")
-    
+
     questionnaire = Questionnaire(
         title=str_escape(req_json.get("title")),
         description=str_escape(req_json.get("description")),
@@ -99,7 +119,7 @@ def save():
         status=req_json.get("status"),
         start_time=start_time_obj,
         end_time=end_time_obj,
-        max_responses=req_json.get("max_responses"),
+        max_responses=req_json.get("max_responses") or 0,
         allow_anonymous=bool(req_json.get("allow_anonymous")),
         require_login=bool(req_json.get("require_login")),
         sort_order=req_json.get("sort_order", 0),
@@ -113,44 +133,69 @@ def save():
 @authorize("system:questionnaire:edit", log=True)
 def edit(id):
     questionnaire = curd.get_one_by_id(Questionnaire, id)
-    return render_template("system/questionnaire/edit.html", questionnaire=questionnaire)
+    return render_template(
+        "system/questionnaire/edit.html", questionnaire=questionnaire
+    )
 
 
 @bp.get("/design/<int:id>")
 @authorize("system:questionnaire:edit", log=True)
 def design(id):
     questionnaire = curd.get_one_by_id(Questionnaire, id)
-    return render_template("system/questionnaire/design.html", questionnaire=questionnaire)
+    return render_template(
+        "system/questionnaire/design.html", questionnaire=questionnaire
+    )
 
 
-# 启用
-@bp.put("/enable")
+# 发布问卷
+@bp.post("/publish/<int:questionnaire_id>")
 @authorize("system:questionnaire:edit", log=True)
-def enable():
-    id = request.get_json(force=True).get("id")
-    if id:
-        enable = 1
-        d = Questionnaire.query.filter_by(id=id).update({"status": enable})
-        if d:
-            db.session.commit()
-            return success_api(msg="启用成功")
-        return fail_api(msg="出错啦")
-    return fail_api(msg="数据错误")
+def publish(questionnaire_id):
+    """发布问卷接口"""
+    if not questionnaire_id:
+        return fail_api(msg="问卷ID不能为空")
 
+    # 查询问卷信息
+    questionnaire = Questionnaire.query.get(questionnaire_id)
+    if not questionnaire:
+        return fail_api(msg="问卷不存在")
 
-# 禁用
-@bp.put("/disable")
-@authorize("system:questionnaire:edit", log=True)
-def dis_enable():
-    id = request.get_json(force=True).get("id")
-    if id:
-        enable = 2
-        d = Questionnaire.query.filter_by(id=id).update({"status": enable})
-        if d:
-            db.session.commit()
-            return success_api(msg="禁用成功")
-        return fail_api(msg="出错啦")
-    return fail_api(msg="数据错误")
+    # 检查问卷是否已经发布
+    if questionnaire.status == 1:
+        return fail_api(msg="问卷已经发布，无需重复发布")
+
+    # 验证问卷是否可以发布
+    # 1. 检查问卷是否有问题
+    question_count = questionnaire.questions.count()
+    if question_count == 0:
+        return fail_api(msg="问卷至少需要包含一个问题才能发布")
+
+    # 2. 检查所有问题是否配置完整
+    for question in questionnaire.questions:
+        # 选择题必须有选项
+        if question.question_type in ["single_choice", "multiple_choice"]:
+            option_count = question.options.count()
+            if option_count < 2:
+                return fail_api(msg=f'选择题"{question.title}"至少需要2个选项')
+
+    # 3. 检查结束时间必须晚于开始时间
+    current_time = datetime.now()
+    if questionnaire.start_time and questionnaire.end_time:
+        if questionnaire.end_time <= questionnaire.start_time:
+            return fail_api(msg="结束时间必须晚于开始时间")
+
+    try:
+        # 更新问卷状态为发布状态
+        questionnaire.status = 1  # 1表示发布状态
+        questionnaire.is_published = True
+        questionnaire.update_at = current_time
+
+        db.session.commit()
+        return success_api(msg="问卷发布成功")
+
+    except Exception as e:
+        db.session.rollback()
+        return fail_api(msg=f"发布失败：{str(e)}")
 
 
 @bp.put("/update")
@@ -158,53 +203,55 @@ def dis_enable():
 def update():
     req_json = request.get_json(force=True)
     id = str_escape(req_json.get("id"))
-    title = str_escape(req_json.get('title'))
-    description = str_escape(req_json.get('description'))
-    questionnaire_type = str_escape(req_json.get('questionnaire_type'))
-    status = req_json.get('status')
-    start_time = req_json.get('start_time')
-    end_time = req_json.get('end_time')
-    max_responses = req_json.get('max_responses')
-    allow_anonymous = req_json.get('allow_anonymous')
-    require_login = req_json.get('require_login')
-    sort_order = req_json.get('sort_order')
-    
+    title = str_escape(req_json.get("title"))
+    description = str_escape(req_json.get("description"))
+    questionnaire_type = str_escape(req_json.get("questionnaire_type"))
+    status = req_json.get("status")
+    start_time = req_json.get("start_time")
+    end_time = req_json.get("end_time")
+    max_responses = req_json.get("max_responses") or 0
+    allow_anonymous = req_json.get("allow_anonymous")
+    require_login = req_json.get("require_login")
+    sort_order = req_json.get("sort_order")
+
     # 构建更新数据字典
     update_data = {}
     if title is not None:
-        update_data['title'] = title
+        update_data["title"] = title
     if description is not None:
-        update_data['description'] = description
+        update_data["description"] = description
     if questionnaire_type is not None:
-        update_data['questionnaire_type'] = questionnaire_type
+        update_data["questionnaire_type"] = questionnaire_type
     if status is not None:
-        update_data['status'] = status
+        update_data["status"] = status
     if start_time is not None:
         try:
             # 将字符串时间转换为datetime对象
-            update_data['start_time'] = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+            update_data["start_time"] = datetime.strptime(
+                start_time, "%Y-%m-%d %H:%M:%S"
+            )
         except (ValueError, TypeError):
             return fail_api(msg="开始时间格式错误")
     if end_time is not None:
         try:
             # 将字符串时间转换为datetime对象
-            update_data['end_time'] = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
+            update_data["end_time"] = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError):
             return fail_api(msg="结束时间格式错误")
     if max_responses is not None:
-        update_data['max_responses'] = max_responses
+        update_data["max_responses"] = max_responses
     if allow_anonymous is not None:
-        update_data['allow_anonymous'] = allow_anonymous
+        update_data["allow_anonymous"] = allow_anonymous
     if require_login is not None:
-        update_data['require_login'] = require_login
+        update_data["require_login"] = require_login
     if sort_order is not None:
-        update_data['sort_order'] = sort_order
-    
+        update_data["sort_order"] = sort_order
+
     # 执行更新
     result = Questionnaire.query.filter_by(id=id).update(update_data)
     if not result:
         return fail_api(msg="更新失败")
-    
+
     db.session.commit()
     return success_api(msg="更新成功")
 
@@ -228,7 +275,9 @@ def remove(_id):
 def question_add(questionnaire_id):
     """添加问题页面"""
     questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
-    return render_template("system/questionnaire/question_edit.html", questionnaire=questionnaire)
+    return render_template(
+        "system/questionnaire/question_edit.html", questionnaire=questionnaire
+    )
 
 
 @bp.get("/question/edit/<int:question_id>")
@@ -244,18 +293,18 @@ def question_edit(question_id):
 def question_save():
     """保存问题"""
     data = request.get_json()
-    
-    questionnaire_id = data.get('questionnaire_id')
-    title = data.get('title')
-    description = data.get('description', '')
-    question_type = data.get('question_type')
-    is_required = data.get('is_required', False)
-    sort_order = data.get('sort_order', 0)
-    options = data.get('options', [])
-    
+
+    questionnaire_id = data.get("questionnaire_id")
+    title = data.get("title")
+    description = data.get("description", "")
+    question_type = data.get("question_type")
+    is_required = data.get("is_required", False)
+    sort_order = data.get("sort_order", 0)
+    options = data.get("options", [])
+
     if not all([questionnaire_id, title, question_type]):
         return fail_api(msg="请填写完整信息")
-    
+
     # 创建问题
     question = Question(
         questionnaire_id=questionnaire_id,
@@ -263,25 +312,26 @@ def question_save():
         description=description,
         question_type=question_type,
         is_required=is_required,
-        sort_order=sort_order
+        sort_order=sort_order,
     )
-    
+
     db.session.add(question)
     db.session.flush()  # 获取问题ID
-    
+
     # 如果是选择题，添加选项
-    if question_type in ['single_choice', 'multiple_choice'] and options:
+    if question_type in ["single_choice", "multiple_choice"] and options:
         for i, option_data in enumerate(options):
             option = QuestionOption(
                 question_id=question.id,
-                option_text=option_data.get('text', ''),
-                option_value=option_data.get('value', ''),
+                option_text=option_data.get("text", ""),
+                option_value=option_data.get("value", ""),
                 sort_order=i,
-                is_other=option_data.get('is_other', False),
-                is_correct=option_data.get('is_correct', False)
+                is_other=option_data.get("is_other", False),
+                is_correct=option_data.get("is_correct", False),
+                allow_input=option_data.get("allow_input", False),  # 是否允许用户输入
             )
             db.session.add(option)
-    
+
     db.session.commit()
     return success_api(msg="保存成功")
 
@@ -290,45 +340,46 @@ def question_save():
 def question_update():
     """更新问题"""
     data = request.get_json()
-    
-    question_id = data.get('id')
-    title = data.get('title')
-    description = data.get('description', '')
-    question_type = data.get('question_type')
-    is_required = data.get('is_required', False)
-    sort_order = data.get('sort_order', 0)
-    options = data.get('options', [])
-    
+
+    question_id = data.get("id")
+    title = data.get("title")
+    description = data.get("description", "")
+    question_type = data.get("question_type")
+    is_required = data.get("is_required", False)
+    sort_order = data.get("sort_order", 0)
+    options = data.get("options", [])
+
     if not all([question_id, title, question_type]):
         return fail_api(msg="请填写完整信息")
-    
+
     question = Question.query.get(question_id)
     if not question:
         return fail_api(msg="问题不存在")
-    
+
     # 更新问题信息
     question.title = title
     question.description = description
     question.question_type = question_type
     question.is_required = is_required
     question.sort_order = sort_order
-    
+
     # 删除原有选项
     QuestionOption.query.filter_by(question_id=question_id).delete()
-    
+
     # 如果是选择题，添加新选项
-    if question_type in ['single_choice', 'multiple_choice'] and options:
+    if question_type in ["single_choice", "multiple_choice"] and options:
         for i, option_data in enumerate(options):
             option = QuestionOption(
                 question_id=question_id,
-                option_text=option_data.get('text', ''),
-                option_value=option_data.get('value', ''),
+                option_text=option_data.get("text", ""),
+                option_value=option_data.get("value", ""),
                 sort_order=i,
-                is_other=option_data.get('is_other', False),
-                is_correct=option_data.get('is_correct', False)
+                is_other=option_data.get("is_other", False),
+                is_correct=option_data.get("is_correct", False),
+                allow_input=option_data.get("allow_input", False),  # 是否允许用户输入
             )
             db.session.add(option)
-    
+
     db.session.commit()
     return success_api(msg="更新成功")
 
@@ -343,7 +394,7 @@ def question_delete(question_id):
     result = Question.query.filter_by(id=question_id).delete()
     if not result:
         return fail_api(msg="删除失败")
-    
+
     db.session.commit()
     return success_api(msg="删除成功")
 
@@ -354,61 +405,76 @@ def detail(questionnaire_id):
     questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
     if not questionnaire:
         return fail_api(msg="问卷不存在")
-    
+
     questionnaire_data = {
-        'id': questionnaire.id,
-        'title': questionnaire.title,
-        'description': questionnaire.description,
-        'questionnaire_type': questionnaire.questionnaire_type,
-        'type_text': questionnaire.type_text,
-        'status': questionnaire.status,
-        'status_text': questionnaire.status_text,
-        'start_time': questionnaire.start_time.strftime('%Y-%m-%d %H:%M:%S') if questionnaire.start_time else None,
-        'end_time': questionnaire.end_time.strftime('%Y-%m-%d %H:%M:%S') if questionnaire.end_time else None,
-        'max_responses': questionnaire.max_responses,
-        'allow_anonymous': questionnaire.allow_anonymous,
-        'require_login': questionnaire.require_login,
-        'sort_order': questionnaire.sort_order,
-        'response_count': questionnaire.response_count,
-        'question_count': questionnaire.question_count,
-        'create_at': questionnaire.create_at,
-        'update_at': questionnaire.update_at,
+        "id": questionnaire.id,
+        "title": questionnaire.title,
+        "description": questionnaire.description,
+        "questionnaire_type": questionnaire.questionnaire_type,
+        "type_text": questionnaire.type_text,
+        "status": questionnaire.status,
+        "status_text": questionnaire.status_text,
+        "start_time": (
+            questionnaire.start_time.strftime("%Y-%m-%d %H:%M:%S")
+            if questionnaire.start_time
+            else None
+        ),
+        "end_time": (
+            questionnaire.end_time.strftime("%Y-%m-%d %H:%M:%S")
+            if questionnaire.end_time
+            else None
+        ),
+        "max_responses": questionnaire.max_responses,
+        "allow_anonymous": questionnaire.allow_anonymous,
+        "require_login": questionnaire.require_login,
+        "sort_order": questionnaire.sort_order,
+        "response_count": questionnaire.response_count,
+        "question_count": questionnaire.question_count,
+        "create_at": questionnaire.create_at,
+        "update_at": questionnaire.update_at,
     }
-    
+
     return jsonify(success=True, msg="获取成功", data=questionnaire_data)
 
 
 @bp.get("/questions/<int:questionnaire_id>")
 def questions(questionnaire_id):
     """根据问卷ID获取问题列表"""
-    questions = Question.query.filter_by(questionnaire_id=questionnaire_id).order_by(Question.sort_order).all()
-    
+    questions = (
+        Question.query.filter_by(questionnaire_id=questionnaire_id)
+        .order_by(Question.sort_order)
+        .all()
+    )
+
     question_list = []
     for question in questions:
         question_data = {
-            'id': question.id,
-            'title': question.title,
-            'description': question.description,
-            'question_type': question.question_type,
-            'type_text': question.type_text,
-            'is_required': question.is_required,
-            'sort_order': question.sort_order,
-            'options': []
+            "id": question.id,
+            "title": question.title,
+            "description": question.description,
+            "question_type": question.question_type,
+            "type_text": question.type_text,
+            "is_required": question.is_required,
+            "sort_order": question.sort_order,
+            "options": [],
         }
-        
+
         # 如果是选择题，获取选项
         if question.has_options:
             options = question.get_options_list()
-            question_data['options'] = [{
-                'id': option.id,
-                'text': option.option_text,
-                'value': option.option_value,
-                'is_other': option.is_other,
-                'is_correct': option.is_correct
-            } for option in options]
-        
+            question_data["options"] = [
+                {
+                    "id": option.id,
+                    "text": option.option_text,
+                    "value": option.option_value,
+                    "is_other": option.is_other,
+                    "is_correct": option.is_correct,
+                }
+                for option in options
+            ]
+
         question_list.append(question_data)
-    
+
     return jsonify(success=True, msg="获取成功", data=question_list)
 
 
@@ -418,63 +484,94 @@ def question_detail(question_id):
     question = curd.get_one_by_id(Question, question_id)
     if not question:
         return fail_api(msg="问题不存在")
-    
+
     question_data = {
-        'id': question.id,
-        'questionnaire_id': question.questionnaire_id,
-        'title': question.title,
-        'description': question.description,
-        'question_type': question.question_type,
-        'type_text': question.type_text,
-        'is_required': question.is_required,
-        'sort_order': question.sort_order,
-        'options': []
+        "id": question.id,
+        "questionnaire_id": question.questionnaire_id,
+        "title": question.title,
+        "description": question.description,
+        "question_type": question.question_type,
+        "type_text": question.type_text,
+        "is_required": question.is_required,
+        "sort_order": question.sort_order,
+        "options": [],
     }
-    
+
     # 如果是选择题，获取选项
     if question.has_options:
         options = question.get_options_list()
-        question_data['options'] = [{
-            'id': option.id,
-            'text': option.option_text,
-            'value': option.option_value,
-            'is_other': option.is_other,
-            'is_correct': option.is_correct
-        } for option in options]
-    
+        question_data["options"] = [
+            {
+                "id": option.id,
+                "text": option.option_text,
+                "value": option.option_value,
+                "is_other": option.is_other,
+                "is_correct": option.is_correct,
+            }
+            for option in options
+        ]
+
     return jsonify(success=True, msg="获取成功", data=question_data)
 
 
 @bp.get("/question/data/<int:questionnaire_id>")
-@authorize("system:questionnaire:data", log=True)
+@authorize("system:questionnaire:main", log=True)
 def question_data(questionnaire_id):
     """获取问卷的问题列表"""
-    questions = Question.query.filter_by(questionnaire_id=questionnaire_id).order_by(Question.sort_order).all()
-    
+    questions = (
+        Question.query.filter_by(questionnaire_id=questionnaire_id)
+        .order_by(Question.sort_order)
+        .all()
+    )
+
     question_list = []
     for question in questions:
         question_data = {
-            'id': question.id,
-            'title': question.title,
-            'description': question.description,
-            'question_type': question.question_type,
-            'type_text': question.type_text,
-            'is_required': question.is_required,
-            'sort_order': question.sort_order,
-            'options': []
+            "id": question.id,
+            "title": question.title,
+            "description": question.description,
+            "question_type": question.question_type,
+            "type_text": question.type_text,
+            "is_required": question.is_required,
+            "sort_order": question.sort_order,
+            "options": [],
         }
-        
+
         # 如果是选择题，获取选项
         if question.has_options:
             options = question.get_options_list()
-            question_data['options'] = [{
-                'id': option.id,
-                'text': option.option_text,
-                'value': option.option_value,
-                'is_other': option.is_other,
-                'is_correct': option.is_correct
-            } for option in options]
-        
+            question_data["options"] = [
+                {
+                    "id": option.id,
+                    "text": option.option_text,
+                    "value": option.option_value,
+                    "is_other": option.is_other,
+                    "is_correct": option.is_correct,
+                }
+                for option in options
+            ]
+
         question_list.append(question_data)
-    
+
     return success_api(data=question_list)
+
+
+@bp.get("/preview/<int:questionnaire_id>")
+def preview(questionnaire_id):
+    """问卷预览页面"""
+    questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
+    if not questionnaire:
+        return "问卷不存在", 404
+
+    # 获取问卷的所有问题和选项
+    questions = (
+        Question.query.filter_by(questionnaire_id=questionnaire_id)
+        .order_by(Question.sort_order)
+        .all()
+    )
+
+    return render_template(
+        "system/questionnaire/preview.html",
+        questionnaire=questionnaire,
+        questions=questions,
+    )

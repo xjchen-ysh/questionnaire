@@ -67,6 +67,11 @@
         {{# if(d.status == 0){ }}
             <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="design"><i class="pear-icon pear-icon-design"> 设计</i>
             </button>
+            <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="publish"><i class="pear-icon pear-icon-upload"> 发布</i>
+            </button>
+        {{# } else if(d.status == 1){ }}
+            <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview"><i class="pear-icon pear-icon-eye"> 预览</i>
+            </button>
         {{# } }}
     {% endraw %}
     {% if authorize("system:questionnaire:edit") %}
@@ -219,6 +224,10 @@
                 window.edit(obj)
             } else if (obj.event === 'design') {
                 window.design(obj)
+            } else if (obj.event === 'publish') {
+                window.publish(obj)
+            } else if (obj.event === 'preview') {
+                window.preview(obj)
             }
         })
 
@@ -291,8 +300,45 @@
                 type: 2,
                 title: '问卷设计',
                 shade: 0.1,
-                area: ['90%', '90%'],
+                area: ['100%', '100%'],
                 content: MODULE_PATH + 'design/' + obj.data['id']
+            })
+        }
+
+        window.publish = function (obj) {
+            layer.confirm('确定要发布该问卷吗？发布后问卷将对外开放，用户可以填写。', {icon: 3, title: '发布确认'}, function (index) {
+                layer.close(index)
+                let loading = layer.load()
+                $.ajax({
+                    url: MODULE_PATH + 'publish/' + obj.data['id'],
+                    dataType: 'json',
+                    type: 'post',
+                    success: function (result) {
+                        layer.close(loading)
+                        if (result.success) {
+                            popup.success(result.msg, function () {
+                                window.refresh() // 刷新表格数据
+                            })
+                        } else {
+                            popup.failure(result.msg)
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading)
+                        popup.failure('发布失败，请稍后重试')
+                    }
+                })
+            })
+        }
+
+        window.preview = function (obj) {
+            // 在新窗口中打开问卷预览页面
+            layer.open({
+                type: 2,
+                title: '问卷预览 - ' + obj.data['title'],
+                shade: 0.1,
+                area: ['90%', '90%'],
+                content: MODULE_PATH + 'preview/' + obj.data['id']
             })
         }
 

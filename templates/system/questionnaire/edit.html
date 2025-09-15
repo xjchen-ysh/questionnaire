@@ -117,18 +117,22 @@
     let laydate = layui.laydate
 
     // 初始化时间选择器
+    // 获取HTML中已有的时间值，如果没有则使用默认值
+    let startTimeValue = $('#start_time').val()
+    let endTimeValue = $('#end_time').val()
+    
     laydate.render({
       elem: '#start_time',
       type: 'datetime',
       format: 'yyyy-MM-dd HH:mm:ss',
-      value: new Date(new Date().setHours(0,0,0,0))
+      value: startTimeValue || new Date(new Date().setHours(0,0,0,0))
     })
 
     laydate.render({
       elem: '#end_time',
       type: 'datetime',
       format: 'yyyy-MM-dd HH:mm:ss',
-      value: new Date(new Date().setHours(23,59,59,999))
+      value: endTimeValue || new Date(new Date().setHours(23,59,59,999))
     })
 
     form.on('submit(questionnaire-update)', function (data) {

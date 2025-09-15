@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>须知管理</title>
+    {% include 'system/common/header.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='system/admin/css/other/user.css') }}"/>
+    <script src="{{ url_for('static', filename='system/component/layui/layui.js') }}"></script>
+    <script src="{{ url_for('static', filename='system/component/pear/pear.js') }}"></script>
+</head>
+<body class="pear-container">
+{# 查询表单 #}
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form" action="" lay-filter="notice-query-form">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">须知标题</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="title" placeholder="请输入须知标题" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">须知类型</label>
+                    <div class="layui-input-inline">
+                        <select name="notice_type" lay-search="">
+                            <option value="">全部类型</option>
+                            <option value="general">通用须知</option>
+                            <option value="privacy">隐私政策</option>
+                            <option value="terms">服务条款</option>
+                            <option value="safety">安全须知</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">状态</label>
+                    <div class="layui-input-inline">
+                        <select name="status" lay-search="">
+                            <option value="">全部状态</option>
+                            <option value="0">禁用</option>
+                            <option value="1">启用</option>
+                            <option value="2">归档</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="notice-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# 须知表格 #}
+<div class="layui-card">
+    <div class="layui-card-body">
+        <table id="notice-table" lay-filter="notice-table"></table>
+    </div>
+</div>
+
+{# 表格工具栏 #}
+<script type="text/html" id="notice-toolbar">
+    {% if authorize("system:notice:add") %}
+        <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+            <i class="pear-icon pear-icon-add"></i>
+            新增须知
+        </button>
+    {% endif %}
+    <button class="pear-btn pear-btn-success pear-btn-md" lay-event="refresh">
+        <i class="layui-icon layui-icon-refresh"></i>
+        刷新
+    </button>
+</script>
+
+{# 行操作按钮 #}
+<script type="text/html" id="notice-bar">
+    {% raw %}
+        {{# if(d.status == 1){ }}
+            <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview">
+                <i class="pear-icon pear-icon-eye"></i> 预览
+            </button>
+        {{# } }}
+    {% endraw %}
+    {% if authorize("system:notice:edit") %}
+        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit">
+            <i class="pear-icon pear-icon-edit"></i> 编辑
+        </button>
+    {% endif %}
+    {% if authorize("system:notice:remove") %}
+        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove">
+            <i class="pear-icon pear-icon-ashbin"></i> 删除
+        </button>
+    {% endif %}
+</script>
+
+{# 状态显示模板 #}
+{% raw %}
+<script type="text/html" id="notice-status">
+    {{# if(d.status == 0){ }}
+        <span class="layui-badge layui-bg-gray">禁用</span>
+    {{# } else if(d.status == 1){ }}
+        <span class="layui-badge layui-bg-green">启用</span>
+    {{# } else if(d.status == 2){ }}
+        <span class="layui-badge layui-bg-blue">归档</span>
+    {{# } }}
+</script>
+{% endraw %}
+
+{# 类型显示模板 #}
+{% raw %}
+<script type="text/html" id="notice-type">
+    {{# if(d.notice_type == 'general'){ }}
+        <span class="layui-badge layui-bg-cyan">通用须知</span>
+    {{# } else if(d.notice_type == 'privacy'){ }}
+        <span class="layui-badge layui-bg-orange">隐私政策</span>
+    {{# } else if(d.notice_type == 'terms'){ }}
+        <span class="layui-badge layui-bg-blue">服务条款</span>
+    {{# } else if(d.notice_type == 'safety'){ }}
+        <span class="layui-badge layui-bg-red">安全须知</span>
+    {{# } }}
+</script>
+{% endraw %}
+
+{# 是否必须确认显示模板 #}
+{% raw %}
+<script type="text/html" id="notice-required">
+    {{# if(d.is_required){ }}
+        <span class="layui-badge layui-bg-green">是</span>
+    {{# } else { }}
+        <span class="layui-badge layui-bg-gray">否</span>
+    {{# } }}
+</script>
+{% endraw %}
+
+<script>
+layui.use(['table', 'form', 'layer'], function () {
+    let table = layui.table;
+    let form = layui.form;
+    let layer = layui.layer;
+
+    // 初始化表格
+    let cols = [
+        [
+            {type: 'checkbox', fixed: 'left'},
+            {field: 'id', title: 'ID', width: 80, sort: true},
+            {field: 'title', title: '须知标题', width: 200},
+            {field: 'notice_type', title: '类型', width: 120, templet: '#notice-type'},
+            {field: 'version', title: '版本', width: 100},
+            {field: 'status', title: '状态', width: 100, templet: '#notice-status'},
+            {field: 'is_required', title: '必须确认', width: 120, templet: '#notice-required'},
+            {field: 'priority', title: '优先级', width: 100, sort: true},
+            {field: 'effective_date', title: '生效日期', width: 160},
+            {field: 'expiry_date', title: '失效日期', width: 160},
+            {field: 'create_at', title: '创建时间', width: 160},
+            {title: '操作', toolbar: '#notice-bar', width: 180, fixed: 'right'}
+        ]
+    ];
+
+    table.render({
+        elem: '#notice-table',
+        url: '{{ url_for("system.notice.data") }}',
+        toolbar: '#notice-toolbar',
+        defaultToolbar: ['filter', 'exports', 'print'],
+        cols: cols,
+        page: true,
+        parseData: function (res) {
+            return {
+                "code": res.code,
+                "msg": res.msg,
+                "count": res.count,
+                "data": res.data
+            };
+        },
+        request: {
+            pageName: 'page',
+            limitName: 'limit'
+        }
+    });
+
+    // 工具栏事件
+    table.on('toolbar(notice-table)', function (obj) {
+        if (obj.event === 'add') {
+            layer.open({
+                type: 2,
+                title: '新增须知',
+                shade: 0.1,
+                area: ['90%', '90%'],
+                content: '{{ url_for("system.notice.add") }}'
+            });
+        } else if (obj.event === 'refresh') {
+            table.reload('notice-table');
+        }
+    });
+
+    // 行工具事件
+    table.on('tool(notice-table)', function (obj) {
+        let data = obj.data;
+        if (obj.event === 'edit') {
+            layer.open({
+                type: 2,
+                title: '编辑须知',
+                shade: 0.1,
+                area: ['90%', '90%'],
+                content: '/system/notice/edit/' + data.id
+            });
+        } else if (obj.event === 'remove') {
+            layer.confirm('确定要删除这条须知吗？', {icon: 3, title: '提示'}, function (index) {
+                $.ajax({
+                    url: '{{ url_for("system.notice.remove") }}',
+                    data: JSON.stringify({id: data.id}),
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    type: 'post',
+                    success: function (result) {
+                        if (result.code === 200) {
+                            layer.msg(result.msg, {icon: 1, time: 1000}, function () {
+                                table.reload('notice-table');
+                            });
+                        } else {
+                            layer.msg(result.msg, {icon: 2, time: 1000});
+                        }
+                    }
+                });
+                layer.close(index);
+            });
+        } else if (obj.event === 'preview') {
+            // 打开预览页面
+            window.open('/h5/notice/' + data.id, '_blank');
+        }
+    });
+
+    // 搜索表单提交
+    form.on('submit(notice-query)', function (data) {
+        table.reload('notice-table', {
+            where: data.field,
+            page: {curr: 1}
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>
