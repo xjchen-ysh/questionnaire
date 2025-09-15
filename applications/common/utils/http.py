@@ -1,9 +1,12 @@
 from flask import jsonify
 
 
-def success_api(msg: str = "成功"):
-    """ 成功响应 默认值“成功” """
-    return jsonify(success=True, msg=msg)
+def success_api(msg: str = "成功", data=None):
+    """ 成功响应 默认值"成功" """
+    response = {"success": True, "msg": msg}
+    if data is not None:
+        response["data"] = data
+    return jsonify(response)
 
 
 def fail_api(msg: str = "失败"):

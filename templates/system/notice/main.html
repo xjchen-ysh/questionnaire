@@ -28,6 +28,7 @@
                             <option value="privacy">隐私政策</option>
                             <option value="terms">服务条款</option>
                             <option value="safety">安全须知</option>
+                            <option value="system">系统须知</option>
                         </select>
                     </div>
                 </div>
@@ -123,6 +124,8 @@
         <span class="layui-badge layui-bg-blue">服务条款</span>
     {{# } else if(d.notice_type == 'safety'){ }}
         <span class="layui-badge layui-bg-red">安全须知</span>
+    {{# } else if(d.notice_type == 'system'){ }}
+        <span class="layui-badge layui-bg-purple">系统须知</span>
     {{# } }}
 </script>
 {% endraw %}

@@ -1,4 +1,5 @@
 import datetime
+import json
 from applications.extensions import db
 
 
@@ -128,6 +129,7 @@ class UserNoticeConfirm(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='确认记录ID')
     notice_id = db.Column(db.Integer, db.ForeignKey('user_notice.id'), nullable=False, comment='须知ID')
     phone = db.Column(db.String(20), comment='手机号码')
+    photo_paths = db.Column(db.Text, comment='照片路径列表(JSON格式存储多张图片路径)')
     user_ip = db.Column(db.String(45), comment='用户IP地址')
     user_agent = db.Column(db.String(500), comment='用户代理信息')
     confirm_method = db.Column(db.String(20), default='web', comment='确认方式(web网页,mobile手机,api接口)')
@@ -164,6 +166,23 @@ class UserNoticeConfirm(db.Model):
             'api': 'API确认'
         }
         return method_map.get(self.confirm_method, '未知方式')
+    
+    @property
+    def photo_paths_list(self):
+        """获取照片路径列表"""
+        if not self.photo_paths:
+            return []
+        try:
+            return json.loads(self.photo_paths)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_photo_paths(self, paths_list):
+        """设置照片路径列表"""
+        if not paths_list:
+            self.photo_paths = None
+        else:
+            self.photo_paths = json.dumps(paths_list)
     
     @classmethod
     def create_confirmation(cls, notice_id, phone, user_ip=None, user_agent=None, confirm_method='web', remark=None):

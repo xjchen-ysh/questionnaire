@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>用户须知管理</title>
+    {% include 'system/common/header.html' %}
+</head>
+<body>
+<form class="layui-form" action="">
+    <div class="mainBox">
+        <div class="main-container">
+            <div class="main-container">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">须知标题</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="title" lay-verify="required" autocomplete="off" placeholder="请输入须知标题"
+                               class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label">须知内容</label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入须知内容" name="content" lay-verify="required" class="layui-textarea" rows="8"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">须知类型</label>
+                    <div class="layui-input-block">
+                        <select name="notice_type" lay-verify="required">
+                            <option value="">请选择须知类型</option>
+                            <option value="general">通用须知</option>
+                            <option value="privacy">隐私政策</option>
+                            <option value="terms">服务条款</option>
+                            <option value="safety">安全须知</option>
+                            <option value="system">系统须知</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">重要程度</label>
+                    <div class="layui-input-block">
+                        <select name="priority" lay-verify="required">
+                            <option value="">请选择重要程度</option>
+                            <option value="0">低</option>
+                            <option value="1">中</option>
+                            <option value="2">高</option>
+                            <option value="3">紧急</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">状态</label>
+                    <div class="layui-input-block">
+                        <input type="radio" name="status" value="0" title="禁用" checked>
+                        <input type="radio" name="status" value="1" title="启用">
+                        <input type="radio" name="status" value="2" title="归档">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">生效时间</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="effective_date" id="effective_date" placeholder="请选择生效时间" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">失效时间</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="expiry_date" id="expiry_date" placeholder="请选择失效时间（可选）" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">是否必读</label>
+                    <div class="layui-input-block">
+                        <input type="checkbox" name="is_required" value="1" title="必须阅读" checked>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">排序</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="sort_order" autocomplete="off" placeholder="请输入排序值" value="0"
+                               class="layui-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bottom">
+        <div class="button-container">
+            <button type="submit" class="pear-btn pear-btn-primary pear-btn-sm" lay-submit="" lay-filter="notice-save">
+                <i class="layui-icon layui-icon-ok"></i>
+                提交
+            </button>
+            <button type="reset" class="pear-btn pear-btn-sm">
+                <i class="layui-icon layui-icon-refresh"></i>
+                重置
+            </button>
+        </div>
+    </div>
+</form>
+{% include 'system/common/footer.html' %}
+<script>
+  layui.use(['form', 'jquery', 'laydate'], function () {
+    let form = layui.form
+    let $ = layui.jquery
+    let laydate = layui.laydate
+
+    // 初始化时间选择器
+    laydate.render({
+      elem: '#effective_date',
+      type: 'datetime',
+      format: 'yyyy-MM-dd HH:mm:ss',
+      value: new Date()
+    })
+
+    laydate.render({
+      elem: '#expiry_date',
+      type: 'datetime',
+      format: 'yyyy-MM-dd HH:mm:ss'
+    })
+
+    form.on('submit(notice-save)', function (data) {
+      $.ajax({
+        url: '/system/notice/save',
+        data: JSON.stringify(data.field),
+        dataType: 'json',
+        contentType: 'application/json',
+        type: 'post',
+        success: function (result) {
+          if (result.success) {
+            layer.msg(result.msg, { icon: 1, time: 1000 }, function () {
+              // 刷新父页面表格数据
+              if (parent.layui && parent.layui.table) {
+                parent.layui.table.reload('notice-table')
+              }
+              // 关闭弹窗
+              parent.layer.close(parent.layer.getFrameIndex(window.name))
+              // 兼容旧版本的render方法
+              if (typeof parent.render === 'function') {
+                parent.render()
+              }
+            })
+          } else {
+            layer.msg(result.msg, { icon: 2, time: 1000 })
+          }
+        },
+        error: function(xhr, status, error) {
+          layer.msg('保存失败，请稍后重试', { icon: 2, time: 1000 })
+        }
+      })
+      return false
+    })
+  })
+</script>
+</body>
+</html>

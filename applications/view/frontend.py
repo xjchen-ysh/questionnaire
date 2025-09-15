@@ -137,6 +137,7 @@ def confirm_notice_api():
         # 验证必填字段
         notice_id = data.get('notice_id')
         phone = str_escape(data.get('phone', '').strip())
+        photo_paths = data.get('photo_paths', [])
         remark = str_escape(data.get('remark', '').strip())
         
         if not notice_id:
@@ -182,6 +183,10 @@ def confirm_notice_api():
             status=1,
             remark=remark
         )
+        
+        # 设置照片路径
+        if photo_paths and isinstance(photo_paths, list):
+            confirm_record.set_photo_paths(photo_paths)
         
 
         

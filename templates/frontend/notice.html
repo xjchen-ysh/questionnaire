@@ -193,6 +193,48 @@
             margin-top: 10px;
         }
         
+        .photo-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .photo-item {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .photo-item img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 2px solid #ddd;
+        }
+        
+        .photo-item .remove-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .photo-item .remove-btn:hover {
+            background: #ff3742;
+        }
+        
         .btn {
             width: 100%;
             padding: 12px;
@@ -360,13 +402,13 @@
             <div class="form-group">
                 <label for="photo">上传照片 (可选)</label>
                 <div class="photo-upload" id="photoUpload">
-                    <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
+                    <input type="file" id="photo" name="photo" accept="image/*" multiple style="display: none;">
                     <div id="uploadText">
                         <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
                         <div>点击或拖拽上传照片</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 5px;">支持 PNG、JPG、JPEG、GIF 格式，最大 5MB</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;">支持 PNG、JPG、JPEG、GIF 格式，最大 5MB，可选择多张</div>
                     </div>
-                    <img id="photoPreview" class="photo-preview" style="display: none;">
+                    <div id="photoPreviewContainer" class="photo-preview-container"></div>
                 </div>
             </div>
             
@@ -385,14 +427,14 @@
     <script>
         // 全局变量
         const noticeId = {{ notice.id }};
-        let uploadedPhotoPath = '';
+        let uploadedPhotoPaths = []; // 改为数组存储多张图片路径
         
         // DOM 元素
         const confirmForm = document.getElementById('confirmForm');
         const phoneInput = document.getElementById('phone');
         const photoInput = document.getElementById('photo');
         const photoUpload = document.getElementById('photoUpload');
-        const photoPreview = document.getElementById('photoPreview');
+        const photoPreviewContainer = document.getElementById('photoPreviewContainer');
         const uploadText = document.getElementById('uploadText');
         const confirmBtn = document.getElementById('confirmBtn');
         const loading = document.getElementById('loading');
@@ -438,44 +480,94 @@
         photoUpload.addEventListener('drop', (e) => {
             e.preventDefault();
             photoUpload.classList.remove('dragover');
-            const files = e.dataTransfer.files;
+            const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
-                handleFile(files[0]);
+                handleFiles(files);
             }
         });
         
         function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                handleFile(file);
+            const files = Array.from(e.target.files);
+            if (files.length > 0) {
+                handleFiles(files);
             }
         }
         
-        function handleFile(file) {
-            // 验证文件类型
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
-            if (!allowedTypes.includes(file.type)) {
-                showAlert('请选择 PNG、JPG、JPEG 或 GIF 格式的图片');
+        function handleFiles(files) {
+            // 验证文件数量限制（最多5张）
+            if (uploadedPhotoPaths.length + files.length > 5) {
+                showAlert('最多只能上传5张图片');
                 return;
             }
             
-            // 验证文件大小 (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                showAlert('文件大小不能超过 5MB');
-                return;
-            }
+            files.forEach(file => {
+                // 验证文件类型
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    showAlert(`文件 ${file.name} 格式不支持，请选择 PNG、JPG、JPEG 或 GIF 格式的图片`);
+                    return;
+                }
+                
+                // 验证文件大小 (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showAlert(`文件 ${file.name} 大小超过 5MB 限制`);
+                    return;
+                }
+                
+                // 创建预览项
+                createPreviewItem(file);
+                
+                // 上传文件
+                uploadPhoto(file);
+            });
+        }
+        
+        function createPreviewItem(file) {
+            const photoItem = document.createElement('div');
+            photoItem.className = 'photo-item';
+            
+            const img = document.createElement('img');
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-btn';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = '删除图片';
             
             // 显示预览
             const reader = new FileReader();
             reader.onload = (e) => {
-                photoPreview.src = e.target.result;
-                photoPreview.style.display = 'block';
-                uploadText.style.display = 'none';
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
             
-            // 上传文件
-            uploadPhoto(file);
+            photoItem.appendChild(img);
+            photoItem.appendChild(removeBtn);
+            photoPreviewContainer.appendChild(photoItem);
+            
+            // 隐藏上传提示文字
+            if (uploadedPhotoPaths.length === 0) {
+                uploadText.style.display = 'none';
+            }
+            
+            // 删除按钮事件
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removePhotoItem(photoItem, file.name);
+            });
+            
+            return photoItem;
+        }
+        
+        function removePhotoItem(photoItem, fileName) {
+            // 从DOM中移除
+            photoItem.remove();
+            
+            // 从上传路径数组中移除
+            uploadedPhotoPaths = uploadedPhotoPaths.filter(path => !path.includes(fileName));
+            
+            // 如果没有图片了，显示上传提示
+            if (uploadedPhotoPaths.length === 0) {
+                uploadText.style.display = 'block';
+            }
         }
         
         function uploadPhoto(file) {
@@ -489,25 +581,45 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    uploadedPhotoPath = data.data.path;
-                    showAlert('照片上传成功', 'success');
+                    // 将上传成功的路径添加到数组中
+                    uploadedPhotoPaths.push(data.data.path);
+                    showAlert(`照片 ${file.name} 上传成功`, 'success');
                 } else {
-                    showAlert(data.msg || '照片上传失败');
-                    resetPhotoUpload();
+                    showAlert(data.msg || `照片 ${file.name} 上传失败`);
+                    // 移除对应的预览项
+                    removeFailedUpload(file.name);
                 }
             })
             .catch(error => {
                 console.error('上传错误:', error);
-                showAlert('照片上传失败，请重试');
-                resetPhotoUpload();
+                showAlert(`照片 ${file.name} 上传失败，请重试`);
+                // 移除对应的预览项
+                removeFailedUpload(file.name);
             });
         }
         
+        function removeFailedUpload(fileName) {
+            // 查找并移除上传失败的预览项
+            const photoItems = photoPreviewContainer.querySelectorAll('.photo-item');
+            photoItems.forEach(item => {
+                const img = item.querySelector('img');
+                if (img && img.alt === fileName) {
+                    item.remove();
+                }
+            });
+            
+            // 如果没有图片了，显示上传提示
+            if (photoPreviewContainer.children.length === 0) {
+                uploadText.style.display = 'block';
+            }
+        }
+        
         function resetPhotoUpload() {
-            photoPreview.style.display = 'none';
+            // 清空预览容器
+            photoPreviewContainer.innerHTML = '';
             uploadText.style.display = 'block';
             photoInput.value = '';
-            uploadedPhotoPath = '';
+            uploadedPhotoPaths = [];
         }
         
         // 表单提交处理
@@ -536,7 +648,7 @@
                 const confirmData = {
                     notice_id: noticeId,
                     phone: phone,
-                    photo_path: uploadedPhotoPath,
+                    photo_paths: uploadedPhotoPaths, // 改为多张图片路径数组
                     remark: ''
                 };
                 
@@ -553,6 +665,9 @@
                         showAlert('确认成功！感谢您的配合。', 'success');
                         confirmBtn.textContent = '已确认';
                         confirmBtn.disabled = true;
+                        // 隐藏加载状态
+                        confirmForm.style.display = 'block';
+                        loading.style.display = 'none';
                     } else {
                         showAlert(data.msg || '确认失败，请重试');
                         confirmForm.style.display = 'block';
