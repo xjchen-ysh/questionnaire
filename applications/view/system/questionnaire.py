@@ -1,3 +1,4 @@
+from venv import logger
 from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime
 
@@ -305,6 +306,12 @@ def question_save():
     if not all([questionnaire_id, title, question_type]):
         return fail_api(msg="请填写完整信息")
 
+    # 设置问题配置
+    config = None
+    if question_type == "rating":
+        # 评分题默认配置
+        config = {"max_rating": 5, "min_rating": 1}
+
     # 创建问题
     question = Question(
         questionnaire_id=questionnaire_id,
@@ -313,6 +320,7 @@ def question_save():
         question_type=question_type,
         is_required=is_required,
         sort_order=sort_order,
+        config=config,
     )
 
     db.session.add(question)
@@ -356,12 +364,19 @@ def question_update():
     if not question:
         return fail_api(msg="问题不存在")
 
+    # 设置问题配置
+    config = None
+    if question_type == "rating":
+        # 评分题默认配置
+        config = {"max_rating": 5, "min_rating": 1}
+
     # 更新问题信息
     question.title = title
     question.description = description
     question.question_type = question_type
     question.is_required = is_required
     question.sort_order = sort_order
+    question.config = config
 
     # 删除原有选项
     QuestionOption.query.filter_by(question_id=question_id).delete()
@@ -575,3 +590,421 @@ def preview(questionnaire_id):
         questionnaire=questionnaire,
         questions=questions,
     )
+
+
+@bp.get("/fill/<int:questionnaire_id>")
+def fill(questionnaire_id):
+    """问卷填写页面（移动端友好）"""
+    questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
+    if not questionnaire:
+        return "问卷不存在", 404
+    
+    # 检查问卷状态
+    if questionnaire.status != 1:
+        return "问卷未发布或已关闭", 403
+    
+    # 检查问卷时间
+    current_time = datetime.now()
+    if questionnaire.start_time and current_time < questionnaire.start_time:
+        return "问卷尚未开始", 403
+    
+    if questionnaire.end_time and current_time > questionnaire.end_time:
+        return "问卷已结束", 403
+    
+    # 检查回答数量限制
+    if questionnaire.max_responses:
+        response_count = QuestionnaireResponse.query.filter_by(
+            questionnaire_id=questionnaire_id
+        ).count()
+        if response_count >= questionnaire.max_responses:
+            return "问卷回答数量已达上限", 403
+
+    # 获取问卷的所有问题和选项
+    questions = (
+        Question.query.filter_by(questionnaire_id=questionnaire_id)
+        .order_by(Question.sort_order)
+        .all()
+    )
+
+    return render_template(
+        "system/questionnaire/fill.html",
+        questionnaire=questionnaire,
+        questions=questions,
+    )
+
+
+@bp.post("/submit/<int:questionnaire_id>")
+def submit_questionnaire(questionnaire_id):
+    """提交问卷答案"""
+    try:
+        questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
+        if not questionnaire:
+            return fail_api(msg="问卷不存在")
+        
+        # 检查问卷状态
+        if questionnaire.status != 1:
+            return fail_api(msg="问卷未发布或已关闭")
+        
+        # 检查问卷时间
+        current_time = datetime.now()
+        if questionnaire.start_time and current_time < questionnaire.start_time:
+            return fail_api(msg="问卷尚未开始")
+        
+        if questionnaire.end_time and current_time > questionnaire.end_time:
+            return fail_api(msg="问卷已结束")
+        
+        # 检查回答数量限制
+        if questionnaire.max_responses:
+            response_count = QuestionnaireResponse.query.filter_by(
+                questionnaire_id=questionnaire_id
+            ).count()
+            if response_count >= questionnaire.max_responses:
+                return fail_api(msg="问卷回答数量已达上限")
+
+        # 获取提交的数据
+        data = request.get_json()
+        if not data:
+            return fail_api(msg="提交数据不能为空")
+        
+        # 验证手机号
+        phone = data.get('phone', '').strip()
+        if not phone:
+            return fail_api(msg="请填写手机号")
+        
+        # 简单的手机号格式验证
+        import re
+        if not re.match(r'^1[3-9]\d{9}$', phone):
+            return fail_api(msg="手机号格式不正确")
+        
+        # 获取姓名（可选）
+        name = data.get('name', '').strip()
+        
+        # 获取问题答案
+        answers = data.get('answers', {})
+        if not answers:
+            return fail_api(msg="请至少回答一个问题")
+        
+        # 验证必填问题
+        questions = Question.query.filter_by(questionnaire_id=questionnaire_id).all()
+        for question in questions:
+            if question.is_required and str(question.id) not in answers:
+                return fail_api(msg=f"问题{question.title}为必填项")
+        
+        # 创建问卷回答记录
+        response = QuestionnaireResponse(
+            questionnaire_id=questionnaire_id,
+            phone=phone,
+            name=name if name else None,  # 保存姓名，如果为空则设为None
+            status=1,  # 已完成
+            submit_time=current_time,
+            ip_address=request.remote_addr
+        )
+        
+        db.session.add(response)
+        db.session.flush()  # 获取response.id
+        
+        # 导入QuestionAnswer模型
+        from applications.models.questionnaire_response import QuestionAnswer
+        
+        # 保存每个问题的答案
+        for question_id_str, answer_data in answers.items():
+            question_id = int(question_id_str)
+            
+            # 创建答案记录
+            answer = QuestionAnswer(
+                response_id=response.id,
+                question_id=question_id
+            )
+            
+            # 根据答案类型设置相应字段
+            if isinstance(answer_data, dict):
+                # 处理复杂答案（包含选项和自定义输入）
+                if 'options' in answer_data:
+                    answer.set_option_ids(answer_data['options'])
+                if 'text' in answer_data:
+                    answer.answer_text = answer_data['text']
+                if 'custom_inputs' in answer_data:
+                    answer.option_custom_inputs = answer_data['custom_inputs']
+            elif isinstance(answer_data, list):
+                # 多选题答案
+                answer.set_option_ids(answer_data)
+            elif isinstance(answer_data, str):
+                # 文本答案
+                answer.answer_text = answer_data
+            else:
+                # 其他类型（如数字）
+                answer.answer_value = str(answer_data)
+            
+            db.session.add(answer)
+        
+        db.session.commit()
+        
+        return success_api(msg="提交成功，感谢您的参与！")
+        
+    except Exception as e:
+        db.session.rollback()
+        return fail_api(msg=f"提交失败：{str(e)}")
+
+
+# 问卷填写记录查看相关路由
+@bp.get("/responses/<int:questionnaire_id>")
+@authorize("system:questionnaire:main", log=True)
+def responses(questionnaire_id):
+    """问卷填写记录查看页面"""
+    questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
+    if not questionnaire:
+        return "问卷不存在", 404
+    
+    return render_template(
+        "system/questionnaire/response_main.html",
+        questionnaire=questionnaire
+    )
+
+
+@bp.get("/response_data/<int:questionnaire_id>")
+@authorize("system:questionnaire:main", log=True)
+def response_data(questionnaire_id):
+    """问卷填写记录数据接口"""
+    # 获取查询参数
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 10))
+    phone = request.args.get('phone', '').strip()
+    status = request.args.get('status', '')
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    
+    # 构建查询条件
+    query = QuestionnaireResponse.query.filter_by(questionnaire_id=questionnaire_id)
+    
+    # 手机号筛选
+    if phone:
+        query = query.filter(QuestionnaireResponse.phone.like(f'%{phone}%'))
+    
+    # 状态筛选
+    if status != '':
+        query = query.filter(QuestionnaireResponse.status == int(status))
+    
+    # 时间范围筛选
+    if start_date:
+        try:
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(QuestionnaireResponse.submit_time >= start_datetime)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_datetime = datetime.strptime(end_date + ' 23:59:59', '%Y-%m-%d %H:%M:%S')
+            query = query.filter(QuestionnaireResponse.submit_time <= end_datetime)
+        except ValueError:
+            pass
+    
+    # 排序
+    query = query.order_by(QuestionnaireResponse.submit_time.desc())
+    
+    # 分页
+    total = query.count()
+    responses = query.offset((page - 1) * limit).limit(limit).all()
+    
+    # 格式化数据
+    data = []
+    for response in responses:
+        # 计算用时
+        duration = ""
+        if response.start_time and response.submit_time:
+            delta = response.submit_time - response.start_time
+            minutes = int(delta.total_seconds() / 60)
+            seconds = int(delta.total_seconds() % 60)
+            duration = f"{minutes}分{seconds}秒"
+        
+        data.append({
+            'id': response.id,
+            'phone': response.phone or '',
+            'ip_address': response.ip_address or '',
+            'user_agent': response.user_agent or '',
+            'status': response.status,
+            'start_time': response.start_time.strftime('%Y-%m-%d %H:%M:%S') if response.start_time else '',
+            'submit_time': response.submit_time.strftime('%Y-%m-%d %H:%M:%S') if response.submit_time else '',
+            'duration': duration
+        })
+    
+    return table_api(data=data, count=total)
+
+
+@bp.get("/response_detail/<int:response_id>")
+@authorize("system:questionnaire:main", log=True)
+def response_detail(response_id):
+    """问卷填写记录详情页面"""
+    response = curd.get_one_by_id(QuestionnaireResponse, response_id)
+    if not response:
+        return "记录不存在", 404
+    
+    # 获取问卷信息
+    questionnaire = curd.get_one_by_id(Questionnaire, response.questionnaire_id)
+    
+    # 获取所有问题和答案
+    from applications.models.questionnaire_response import QuestionAnswer
+    questions = Question.query.filter_by(questionnaire_id=response.questionnaire_id).order_by(Question.sort_order).all()
+    
+    # 获取该回答的所有答案
+    answers = QuestionAnswer.query.filter_by(response_id=response.id).all()
+    answer_dict = {answer.question_id: answer for answer in answers}
+    
+    return render_template(
+        "system/questionnaire/response_detail.html",
+        response=response,
+        questionnaire=questionnaire,
+        questions=questions,
+        answer_dict=answer_dict
+    )
+
+
+@bp.get("/response_export/<int:questionnaire_id>")
+@authorize("system:questionnaire:export", log=True)
+def response_export(questionnaire_id):
+    """导出问卷填写记录"""
+    import csv
+    import io
+    from flask import make_response
+    
+    questionnaire = curd.get_one_by_id(Questionnaire, questionnaire_id)
+    if not questionnaire:
+        return "问卷不存在", 404
+    
+    # 获取查询参数（与response_data相同的筛选逻辑）
+    phone = request.args.get('phone', '').strip()
+    status = request.args.get('status', '')
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    
+    # 构建查询条件
+    query = QuestionnaireResponse.query.filter_by(questionnaire_id=questionnaire_id)
+    
+    if phone:
+        query = query.filter(QuestionnaireResponse.phone.like(f'%{phone}%'))
+    
+    if status != '':
+        query = query.filter(QuestionnaireResponse.status == int(status))
+    
+    if start_date:
+        try:
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(QuestionnaireResponse.submit_time >= start_datetime)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_datetime = datetime.strptime(end_date + ' 23:59:59', '%Y-%m-%d %H:%M:%S')
+            query = query.filter(QuestionnaireResponse.submit_time <= end_datetime)
+        except ValueError:
+            pass
+    
+    responses = query.order_by(QuestionnaireResponse.submit_time.desc()).all()
+    
+    # 创建CSV内容
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 写入表头
+    headers = ['ID', '手机号', 'IP地址', '状态', '开始时间', '提交时间', '用时']
+    writer.writerow(headers)
+    
+    # 写入数据
+    for response in responses:
+        # 计算用时
+        duration = ""
+        if response.start_time and response.submit_time:
+            delta = response.submit_time - response.start_time
+            minutes = int(delta.total_seconds() / 60)
+            seconds = int(delta.total_seconds() % 60)
+            duration = f"{minutes}分{seconds}秒"
+        
+        row = [
+            response.id,
+            response.phone or '',
+            response.ip_address or '',
+            '已完成' if response.status == 1 else '进行中',
+            response.start_time.strftime('%Y-%m-%d %H:%M:%S') if response.start_time else '',
+            response.submit_time.strftime('%Y-%m-%d %H:%M:%S') if response.submit_time else '',
+            duration
+        ]
+        writer.writerow(row)
+    
+    # 创建响应
+    output.seek(0)
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename=questionnaire_{questionnaire_id}_responses.csv'
+    
+    return response
+
+
+@bp.get("/response_download/<int:response_id>")
+@authorize("system:questionnaire:main", log=True)
+def response_download(response_id):
+    """下载单个问卷填写记录"""
+    import json
+    from flask import make_response
+    
+    response = curd.get_one_by_id(QuestionnaireResponse, response_id)
+    if not response:
+        return "记录不存在", 404
+    
+    # 获取问卷和问题信息
+    questionnaire = curd.get_one_by_id(Questionnaire, response.questionnaire_id)
+    questions = Question.query.filter_by(questionnaire_id=response.questionnaire_id).order_by(Question.sort_order).all()
+    
+    # 获取答案
+    from applications.models.questionnaire_response import QuestionAnswer
+    answers = QuestionAnswer.query.filter_by(response_id=response.id).all()
+    answer_dict = {answer.question_id: answer for answer in answers}
+    
+    # 构建导出数据
+    export_data = {
+        'questionnaire': {
+            'id': questionnaire.id,
+            'title': questionnaire.title,
+            'description': questionnaire.description
+        },
+        'response': {
+            'id': response.id,
+            'phone': response.phone,
+            'ip_address': response.ip_address,
+            'status': '已完成' if response.status == 1 else '进行中',
+            'start_time': response.start_time.strftime('%Y-%m-%d %H:%M:%S') if response.start_time else '',
+            'submit_time': response.submit_time.strftime('%Y-%m-%d %H:%M:%S') if response.submit_time else ''
+        },
+        'answers': []
+    }
+    
+    # 添加问题和答案
+    for question in questions:
+        answer = answer_dict.get(question.id)
+        question_data = {
+            'question_id': question.id,
+            'title': question.title,
+            'type': question.question_type,
+            'answer': ''
+        }
+        
+        if answer:
+            if answer.answer_text:
+                question_data['answer'] = answer.answer_text
+            elif answer.answer_value:
+                question_data['answer'] = answer.answer_value
+            elif answer.answer_option_ids:
+                # 获取选项文本
+                option_ids = answer.get_option_ids()
+                options = QuestionOption.query.filter(QuestionOption.id.in_(option_ids)).all()
+                question_data['answer'] = ', '.join([opt.option_text for opt in options])
+        
+        export_data['answers'].append(question_data)
+    
+    # 创建JSON响应
+    json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+    response = make_response(json_str)
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename=response_{response_id}.json'
+    
+    return response

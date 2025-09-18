@@ -86,18 +86,44 @@
             <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview">
                 <i class="pear-icon pear-icon-eye"></i> 预览
             </button>
+            <button class="pear-btn pear-btn-warm pear-btn-sm" lay-event="share">
+                <i class="layui-icon layui-icon-share"></i> 分享
+            </button>
         {{# } }}
+    {% endraw %}
+    {% raw %}
+        {{# if(d.confirmation_count > 0){ }}
+    {% endraw %}
+    {% if authorize("system:notice:confirm:main") %}
+        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="confirm-records">
+            <i class="pear-icon pear-icon-list"></i> 记录
+        </button>
+    {% endif %}
+    {% raw %}
+        {{# } }}
+    {% endraw %}
+    {% raw %}
+        {{# if(d.status != 1){ }}
     {% endraw %}
     {% if authorize("system:notice:edit") %}
         <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit">
-            <i class="pear-icon pear-icon-edit"></i> 编辑
+            编辑
         </button>
     {% endif %}
+    {% raw %}
+        {{# } }}
+    {% endraw %}
+    {% raw %}
+        {{# if(d.confirmation_count == 0){ }}
+    {% endraw %}
     {% if authorize("system:notice:remove") %}
         <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove">
-            <i class="pear-icon pear-icon-ashbin"></i> 删除
+            删除
         </button>
     {% endif %}
+    {% raw %}
+        {{# } }}
+    {% endraw %}
 </script>
 
 {# 状态显示模板 #}
@@ -157,11 +183,9 @@ layui.use(['table', 'form', 'layer'], function () {
             {field: 'version', title: '版本', width: 100},
             {field: 'status', title: '状态', width: 100, templet: '#notice-status'},
             {field: 'is_required', title: '必须确认', width: 120, templet: '#notice-required'},
-            {field: 'priority', title: '优先级', width: 100, sort: true},
             {field: 'effective_date', title: '生效日期', width: 160},
-            {field: 'expiry_date', title: '失效日期', width: 160},
             {field: 'create_at', title: '创建时间', width: 160},
-            {title: '操作', toolbar: '#notice-bar', width: 180, fixed: 'right'}
+            {title: '操作', toolbar: '#notice-bar', width: 240, fixed: 'right'}
         ]
     ];
 
@@ -235,6 +259,74 @@ layui.use(['table', 'form', 'layer'], function () {
         } else if (obj.event === 'preview') {
             // 打开预览页面
             window.open('/h5/notice/' + data.id, '_blank');
+        } else if (obj.event === 'confirm-records') {
+            // 在框架内打开确认记录页面，并传递须知ID作为查询条件
+            parent.layui.tab.addTabOnlyByElem("content", {
+                id: 'confirm-records-' + data.id,
+                title: '确认记录 - ' + data.title,
+                url: '/system/notice/confirm/main?notice_id=' + data.id,
+                close: true
+            });
+        } else if (obj.event === 'share') {
+            // 分享须知
+            let shareUrl = window.location.origin + '/h5/notice/' + data.id;
+            let shareContent = `
+                <div style="padding: 20px;">
+                    <h3 style="margin-bottom: 15px;">分享须知：${data.title}</h3>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">分享链接：</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="text" id="shareUrl" value="${shareUrl}" readonly 
+                                   style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
+                            <button type="button" id="copyUrlBtn" class="pear-btn pear-btn-primary pear-btn-sm">
+                                <i class="layui-icon layui-icon-file"></i> 复制链接
+                            </button>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="margin-bottom: 10px; font-weight: bold;">扫描二维码访问：</div>
+                        <div id="qrcode" style="display: inline-block;"></div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px; font-size: 12px; color: #666;">
+                        <i class="layui-icon layui-icon-tips"></i> 
+                        用户可通过此链接或二维码访问并确认须知内容
+                    </div>
+                </div>
+            `;
+            
+            layer.open({
+                type: 1,
+                title: '分享须知',
+                area: ['500px', '450px'],
+                content: shareContent,
+                success: function(layero, index) {
+                    // 生成二维码 - 优先使用本地API
+                    generateQRCode(shareUrl, 'qrcode');
+                    
+                    // 复制链接功能
+                    document.getElementById('copyUrlBtn').onclick = function() {
+                        let urlInput = document.getElementById('shareUrl');
+                        urlInput.select();
+                        urlInput.setSelectionRange(0, 99999); // 移动端兼容
+                        
+                        try {
+                            document.execCommand('copy');
+                            layer.msg('链接已复制到剪贴板', {icon: 1, time: 1500});
+                        } catch (err) {
+                            // 如果复制失败，尝试使用现代API
+                            if (navigator.clipboard) {
+                                navigator.clipboard.writeText(shareUrl).then(function() {
+                                    layer.msg('链接已复制到剪贴板', {icon: 1, time: 1500});
+                                }).catch(function() {
+                                    layer.msg('复制失败，请手动复制链接', {icon: 2, time: 2000});
+                                });
+                            } else {
+                                layer.msg('复制失败，请手动复制链接', {icon: 2, time: 2000});
+                            }
+                        }
+                    };
+                }
+            });
         }
     });
 
@@ -246,6 +338,51 @@ layui.use(['table', 'form', 'layer'], function () {
         });
         return false;
     });
+
+    // 二维码生成函数
+    window.generateQRCode = function(url, containerId) {
+        // 优先使用前端QRCode库
+        if (typeof QRCode !== 'undefined') {
+            try {
+                new QRCode(document.getElementById(containerId), {
+                    text: url,
+                    width: 150,
+                    height: 150,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff"
+                });
+                return;
+            } catch (e) {
+                console.warn('前端QRCode库生成失败，尝试使用后端API:', e);
+            }
+        }
+        
+        // 使用后端API生成二维码
+        $.ajax({
+            url: '/api/qrcode/generate',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({url: url}),
+            success: function(result) {
+                if (result.success && result.data && result.data.qrcode) {
+                    document.getElementById(containerId).innerHTML = 
+                        '<img src="' + result.data.qrcode + '" alt="二维码" style="border: 1px solid #ddd; width: 150px; height: 150px;">';
+                } else {
+                    // 最后的fallback：使用第三方API
+                    document.getElementById(containerId).innerHTML = 
+                        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + 
+                        encodeURIComponent(url) + '" alt="二维码" style="border: 1px solid #ddd;">';
+                }
+            },
+            error: function() {
+                console.warn('后端二维码API调用失败，使用第三方API');
+                // 最后的fallback：使用第三方API
+                document.getElementById(containerId).innerHTML = 
+                    '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + 
+                    encodeURIComponent(url) + '" alt="二维码" style="border: 1px solid #ddd;">';
+            }
+        });
+    }
 });
 </script>
 </body>

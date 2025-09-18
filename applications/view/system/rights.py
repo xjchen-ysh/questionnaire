@@ -49,9 +49,9 @@ def configs():
             # 标识 ID , 建议与菜单项中的 ID 一致
             "id": "10",
             # 页面地址
-            "href": "/system/rights/welcome",
+            "href": "/system/console",
             # 标题
-            "title": "首页"
+            "title": "控制台"
         }
     }, theme={
         # 默认主题色，对应 colors 配置中的 ID 标识

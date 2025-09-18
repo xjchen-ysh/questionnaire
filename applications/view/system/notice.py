@@ -279,6 +279,7 @@ def confirm_data():
                 "status": confirm.status,
                 "status_text": confirm.status_text,
                 "remark": confirm.remark,
+                "photo_paths_list": confirm.photo_paths_list,
                 "create_at": confirm.create_at.strftime("%Y-%m-%d %H:%M:%S"),
                 "update_at": confirm.update_at.strftime("%Y-%m-%d %H:%M:%S"),
             }
@@ -389,3 +390,13 @@ def detail(notice_id):
 def confirm_main():
     """确认记录管理页面"""
     return render_template("system/notice/confirm_main.html")
+
+
+@bp.get("/confirm/detail/<int:confirm_id>")
+@authorize("system:notice:confirm:main", log=True)
+def confirm_detail(confirm_id):
+    """确认记录详情页面"""
+    confirm = UserNoticeConfirm.query.get(confirm_id)
+    if not confirm:
+        return render_template("system/error/404.html")
+    return render_template("system/notice/confirm_detail.html", confirm=confirm)

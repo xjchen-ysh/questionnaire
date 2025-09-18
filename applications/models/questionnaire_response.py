@@ -9,6 +9,8 @@ class QuestionnaireResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='回答ID')
     questionnaire_id = db.Column(db.Integer, db.ForeignKey('questionnaire.id'), nullable=False, comment='问卷ID')
     user_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), comment='用户ID(匿名时为空)')
+    phone = db.Column(db.String(20), comment='手机号')
+    name = db.Column(db.String(50), comment='用户姓名')
     ip_address = db.Column(db.String(45), comment='IP地址')
     user_agent = db.Column(db.Text, comment='用户代理')
     status = db.Column(db.Integer, default=0, comment='状态(0进行中,1已完成)')

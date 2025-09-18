@@ -53,11 +53,11 @@ def init_questionnaire_data():
             ]
         },
         {
-            'title': '请对我们的服务进行评分（1-10分）：',
+            'title': '请对我们的服务进行评分（1-5分）：',
             'question_type': 'rating',
             'is_required': True,
             'sort_order': 3,
-            'config': {'min_rating': 1, 'max_rating': 10}
+            'config': {'min_rating': 1, 'max_rating': 5}
         },
         {
             'title': '请留下您的宝贵建议：',
@@ -228,6 +228,14 @@ def clear_questionnaire_data():
     db.session.commit()
     print("问卷模块数据清空完成！")
 
+def clear_questionnaire_answer_data():
+    """清空问卷模块所有回答数据"""
+    print("开始清空问卷模块所有回答数据...")
+    QuestionAnswer.query.delete()
+    QuestionnaireResponse.query.delete()
+    db.session.commit()
+    print("问卷模块所有回答数据清空完成！")
+
 
 @question_cli.command("init")
 def init_db():
@@ -238,6 +246,11 @@ def init_db():
 def clear_db():
     """清空问卷模块所有数据"""
     clear_questionnaire_data()
+
+@question_cli.command("clear_answer")
+def clear_answer_db():
+    """清空问卷模块所有回答数据"""
+    clear_questionnaire_answer_data()
 
 
 if __name__ == '__main__':

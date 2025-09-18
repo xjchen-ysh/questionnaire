@@ -3,7 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# session
 flask_session/
+
+# uploaded files
+static/uploads/
 
 # C extensions
 *.so

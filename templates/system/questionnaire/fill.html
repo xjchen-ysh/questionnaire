@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ questionnaire.title }} - 问卷填写</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="format-detection" content="telephone=no" />
+    <!-- Vue.js 3 -->
+    <script src="{{ url_for('static', filename='index/js/vue.global.js') }}"></script>
+    <!-- Naive UI -->
+    <script src="{{ url_for('static', filename='index/js/naiveui.js') }}"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .container {
+        max-width: 100%;
+        margin: 0 auto;
+        background: white;
+        min-height: 100vh;
+      }
+
+      /* 问卷头部 */
+      .questionnaire-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px 16px;
+        text-align: center;
+        position: relative;
+      }
+
+      .questionnaire-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+
+      .questionnaire-description {
+        font-size: 14px;
+        opacity: 0.9;
+        line-height: 1.5;
+      }
+
+      /* 问卷内容 */
+      .questionnaire-content {
+        padding: 16px;
+      }
+
+      /* 联系信息表单 */
+      .contact-form {
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .contact-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+      }
+
+      .contact-description {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 16px;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        border-left: 3px solid #007bff;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 6px;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+        background: #fff;
+        transition: border-color 0.3s;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+      }
+
+      .required {
+        color: #ff4757;
+      }
+
+      /* 问题项 */
+      .question-item {
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .question-title {
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 12px;
+        color: #333;
+        line-height: 1.4;
+      }
+
+      .question-required {
+        color: #ff4757;
+        margin-left: 4px;
+      }
+
+      .question-description {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 12px;
+        line-height: 1.4;
+      }
+
+      /* 选项样式 */
+      .question-options {
+        margin-top: 12px;
+      }
+
+      .option-item {
+        margin-bottom: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #e8e8e8;
+        border-radius: 6px;
+        background: #fafafa;
+        transition: all 0.3s;
+      }
+
+      .option-item:hover {
+        background: #f0f0f0;
+      }
+
+      .option-item.selected {
+        border-color: #667eea;
+        background: #f0f4ff;
+      }
+
+      .option-input {
+        margin-top: 2px;
+        transform: scale(1.2);
+      }
+
+      .option-content {
+        flex: 1;
+      }
+
+      .option-text {
+        font-size: 15px;
+        color: #333;
+        line-height: 1.4;
+      }
+
+      .custom-input {
+        margin-top: 8px;
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      /* 文本输入 */
+      .text-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+        min-height: 44px;
+        resize: vertical;
+      }
+
+      .textarea-input {
+        min-height: 100px;
+      }
+
+      /* 评分题样式 */
+      .rating-container {
+        margin: 15px 0;
+      }
+
+      .rating-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+        justify-content: center;
+      }
+
+      .rating-item {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #e0e0e0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+      }
+
+      .rating-item:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+      }
+
+      .rating-item.selected {
+        border-color: #007bff;
+        background: #007bff;
+        color: white;
+      }
+
+      .rating-number {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .rating-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      /* 提交按钮 */
+      .submit-section {
+        padding: 20px 16px;
+        background: #fff;
+        border-top: 1px solid #e8e8e8;
+        position: sticky;
+        bottom: 0;
+      }
+
+      .submit-btn {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .submit-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      }
+
+      .submit-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* 加载状态 */
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* 成功页面样式 */
+      .success-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+      }
+
+      .success-content {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        text-align: center;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      .success-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 24px;
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: successPulse 2s ease-in-out infinite;
+      }
+
+      .success-icon svg {
+        width: 40px;
+        height: 40px;
+        color: white;
+      }
+
+      @keyframes successPulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      .success-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 16px;
+      }
+
+      .success-message {
+        font-size: 16px;
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 32px;
+      }
+
+      .success-info {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 32px;
+      }
+
+      .success-info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+
+      .success-info-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .success-info-label {
+        color: #666;
+        font-weight: 500;
+      }
+
+      .success-info-value {
+        color: #333;
+        font-weight: 600;
+      }
+
+      .success-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+      }
+
+      .success-btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .success-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .success-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .success-btn-secondary {
+        background: #f8f9fa;
+        color: #666;
+        border: 1px solid #e9ecef;
+      }
+
+      .success-btn-secondary:hover {
+        background: #e9ecef;
+        color: #333;
+      }
+
+      /* 成功页面响应式 */
+      @media (max-width: 480px) {
+        .success-content {
+          padding: 24px;
+          margin: 0 12px;
+        }
+
+        .success-title {
+          font-size: 24px;
+        }
+
+        .success-actions {
+          flex-direction: column;
+        }
+
+        .success-btn {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+
+      /* 响应式优化 */
+      @media (max-width: 480px) {
+        .questionnaire-header {
+          padding: 16px 12px;
+        }
+
+        .questionnaire-content {
+          padding: 12px;
+        }
+
+        .question-item {
+          padding: 12px;
+          margin-bottom: 12px;
+        }
+
+        .submit-section {
+          padding: 16px 12px;
+        }
+
+        /* 评分题移动端适配 */
+        .rating-item {
+          width: 35px;
+          height: 35px;
+        }
+
+        .rating-number {
+          font-size: 13px;
+        }
+
+        .rating-options {
+          gap: 6px;
+        }
+
+        /* 联系信息表单移动端适配 */
+        .contact-form {
+          padding: 12px;
+          margin-bottom: 12px;
+        }
+
+        .contact-description {
+          font-size: 13px;
+          padding: 6px 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <n-message-provider>
+        <!-- 成功页面 -->
+        <div v-if="submitted" class="success-page">
+          <div class="success-content">
+            <div class="success-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+              </svg>
+            </div>
+            <h1 class="success-title">提交成功！</h1>
+            <p class="success-message">
+              感谢您的参与！您的问卷回答已成功提交，我们已收到您的宝贵意见。
+            </p>
+            <div class="success-info">
+              <div class="success-info-item">
+                <span class="success-info-label">问卷名称</span>
+                <span class="success-info-value"
+                  >{{ questionnaire.title }}</span
+                >
+              </div>
+              <div class="success-info-item">
+                <span class="success-info-label">提交时间</span>
+                <span class="success-info-value"
+                  >[[ new Date().toLocaleString('zh-CN') ]]</span
+                >
+              </div>
+              <div class="success-info-item">
+                <span class="success-info-label">联系方式</span>
+                <span class="success-info-value">[[ contactInfo.phone ]]</span>
+              </div>
+            </div>
+            <div class="success-actions">
+              <button
+                class="success-btn success-btn-primary"
+                @click="resetForm()"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+                  />
+                </svg>
+                重新填写
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 问卷填写页面 -->
+        <div v-else class="container">
+          <!-- 问卷头部 -->
+          <div class="questionnaire-header">
+            <div class="questionnaire-title">{{ questionnaire.title }}</div>
+            {% if questionnaire.description %}
+            <div class="questionnaire-description">
+              {{ questionnaire.description }}
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- 问卷内容 -->
+          <div class="questionnaire-content">
+            <!-- 问题列表 -->
+            {% for question in questions %}
+            <div class="question-item">
+              <div class="question-title">
+                {{ loop.index }}. {{ question.title }} {% if
+                question.is_required %}
+                <span class="question-required">*</span>
+                {% endif %}
+              </div>
+
+              {% if question.description %}
+              <div class="question-description">{{ question.description }}</div>
+              {% endif %}
+
+              <!-- 单选题 -->
+              {% if question.question_type == 'single_choice' %}
+              <div class="question-options">
+                {% for option in question.options %}
+                <div
+                  class="option-item"
+                  :class="{ selected: selectedOptions['{{ question.id }}'] === '{{ option.id }}' }"
+                  @click="selectOption({{ question.id }}, {{ option.id }}, 'single')"
+                >
+                  <input
+                    type="radio"
+                    name="question_{{ question.id }}"
+                    value="{{ option.id }}"
+                    class="option-input"
+                    v-model="selectedOptions['{{ question.id }}']"
+                  />
+                  <div class="option-content">
+                    <div class="option-text">{{ option.option_text }}</div>
+                    {% if option.allow_input %}
+                    <input
+                      type="text"
+                      class="custom-input"
+                      placeholder="请输入详细信息..."
+                      v-model="customInputs['{{ question.id }}_{{ option.id }}']"
+                      :disabled="selectedOptions['{{ question.id }}'] !== '{{ option.id }}'"
+                      @click.stop
+                    />
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+
+              <!-- 多选题 -->
+              {% elif question.question_type == 'multiple_choice' %}
+              <div class="question-options">
+                {% for option in question.options %}
+                <div
+                  class="option-item"
+                  :class="{ selected: isOptionSelected({{ question.id }}, {{ option.id }}) }"
+                  @click="selectOption({{ question.id }}, {{ option.id }}, 'multiple')"
+                >
+                  <input
+                    type="checkbox"
+                    value="{{ option.id }}"
+                    class="option-input"
+                    :checked="isOptionSelected({{ question.id }}, {{ option.id }})"
+                  />
+                  <div class="option-content">
+                    <div class="option-text">{{ option.option_text }}</div>
+                    {% if option.allow_input %}
+                    <input
+                      type="text"
+                      class="custom-input"
+                      placeholder="请输入详细信息..."
+                      v-model="customInputs['{{ question.id }}_{{ option.id }}']"
+                      :disabled="!isOptionSelected({{ question.id }}, {{ option.id }})"
+                      @click.stop
+                    />
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+
+              <!-- 评分题 -->
+              {% elif question.question_type == 'rating' %}
+              <div class="rating-container">
+                {% set config = question.config or {} %} {% set min_rating =
+                config.get('min_rating', 1) %} {% set max_rating =
+                config.get('max_rating', 5) %}
+                <div class="rating-options">
+                  {% for i in range(min_rating, max_rating + 1) %}
+                  <div
+                    class="rating-item"
+                    :class="{ selected: selectedOptions['{{ question.id }}'] === '{{ i }}' }"
+                    @click="selectOption({{ question.id }}, '{{ i }}', 'single')"
+                  >
+                    <span class="rating-number">{{ i }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div class="rating-labels">
+                  <span class="rating-label-min">{{ min_rating }}分</span>
+                  <span class="rating-label-max">{{ max_rating }}分</span>
+                </div>
+              </div>
+
+              <!-- 文本题 -->
+              {% elif question.question_type == 'text' %}
+              <input
+                type="text"
+                class="text-input"
+                v-model="textAnswers['{{ question.id }}']"
+                placeholder="请输入您的答案..."
+              />
+
+              <!-- 多行文本题 -->
+              {% elif question.question_type == 'textarea' %}
+              <textarea
+                class="text-input textarea-input"
+                v-model="textAnswers['{{ question.id }}']"
+                placeholder="请输入您的答案..."
+              ></textarea>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- 联系信息表单 -->
+          <div class="contact-form">
+            <div class="contact-title">联系信息</div>
+            <div class="contact-description">
+              请填写您的联系方式，以便我们与您取得联系
+            </div>
+            <div class="form-group">
+              <label class="form-label"
+                >手机号 <span class="required">*</span></label
+              >
+              <input
+                type="tel"
+                class="form-input"
+                v-model="contactInfo.phone"
+                placeholder="请输入您的手机号"
+                maxlength="11"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">姓名（可选）</label>
+              <input
+                type="text"
+                class="form-input"
+                v-model="contactInfo.name"
+                placeholder="请输入您的姓名"
+              />
+            </div>
+          </div>
+
+          <!-- 提交按钮 -->
+          <div v-if="!submitted" class="submit-section">
+            <button
+              class="submit-btn"
+              @click="submitQuestionnaire"
+              :disabled="submitting"
+            >
+              <span v-if="submitting" class="loading"></span>
+              [[ submitting ? '提交中...' : '提交问卷' ]]
+            </button>
+          </div>
+        </div>
+        <!-- 问卷填写页面结束 -->
+      </n-message-provider>
+    </div>
+    <!-- app结束 -->
+
+    <script>
+      const { createApp, ref, reactive } = Vue;
+      const { NMessageProvider, createDiscreteApi } = naive;
+
+      createApp({
+          delimiters: ['[[', ']]'],
+          components: {
+              NMessageProvider
+          },
+          setup() {
+              // 创建message API
+              const { message } = createDiscreteApi(['message']);
+              const selectedOptions = reactive({});
+              const customInputs = reactive({});
+              const textAnswers = reactive({});
+              const contactInfo = reactive({
+                  phone: '',
+                  name: ''
+              });
+              const submitting = ref(false);
+              const submitted = ref(false);
+
+              // 选择选项
+              const selectOption = (questionId, optionId, type) => {
+                  if (type === 'single') {
+                      selectedOptions[questionId] = optionId.toString();
+                  } else if (type === 'multiple') {
+                      if (!selectedOptions[questionId]) {
+                          selectedOptions[questionId] = [];
+                      }
+                      const index = selectedOptions[questionId].indexOf(optionId.toString());
+                      if (index > -1) {
+                          selectedOptions[questionId].splice(index, 1);
+                      } else {
+                          selectedOptions[questionId].push(optionId.toString());
+                      }
+                  }
+              };
+
+              // 检查选项是否被选中（多选题用）
+              const isOptionSelected = (questionId, optionId) => {
+                  const selected = selectedOptions[questionId];
+                  return selected && selected.includes(optionId.toString());
+              };
+
+              // 验证手机号
+              const validatePhone = (phone) => {
+                  const phoneRegex = /^1[3-9]\d{9}$/;
+                  return phoneRegex.test(phone);
+              };
+
+              // 校验必填项
+              const validateRequiredFields = () => {
+                  const requiredQuestions = [
+                      {% for question in questions %}
+                      {% if question.is_required %}
+                      {
+                          id: {{ question.id }},
+                          title: '{{ question.title }}',
+                          type: '{{ question.question_type }}'
+                      },
+                      {% endif %}
+                      {% endfor %}
+                  ];
+
+                  for (const question of requiredQuestions) {
+                      const questionId = question.id.toString();
+                      let hasAnswer = false;
+
+                      // 根据问题类型检查是否有答案
+                      if (question.type === 'single_choice' || question.type === 'multiple_choice' || question.type === 'rating') {
+                          // 选择题和评分题检查selectedOptions
+                          const selected = selectedOptions[questionId];
+                          hasAnswer = selected && (
+                              (Array.isArray(selected) && selected.length > 0) ||
+                              (!Array.isArray(selected) && selected !== '' && selected !== null && selected !== undefined)
+                          );
+                      } else if (question.type === 'text' || question.type === 'textarea') {
+                          // 文本题检查textAnswers
+                          const answer = textAnswers[questionId];
+                          hasAnswer = answer && answer.trim() !== '';
+                      }
+
+                      if (!hasAnswer) {
+                          message.error(`请回答必填问题：${question.title}`);
+                          return false;
+                      }
+                  }
+
+                  return true;
+              };
+
+              // 提交问卷
+              const submitQuestionnaire = async () => {
+                  // 验证手机号
+                  if (!contactInfo.phone) {
+                      message.error('请输入手机号');
+                      return;
+                  }
+
+                  if (!validatePhone(contactInfo.phone)) {
+                      message.error('请输入正确的手机号格式');
+                      return;
+                  }
+
+                  // 校验必填项
+                  if (!validateRequiredFields()) {
+                      return;
+                  }
+
+                  submitting.value = true;
+                  try {
+                      // 构建提交数据
+                      const answers = {};
+
+                      // 获取问题类型映射
+                      const questionTypes = {
+                          {% for question in questions %}
+                          {{ question.id }}: '{{ question.question_type }}',
+                          {% endfor %}
+                      };
+
+                      // 处理选择题和评分题答案
+                      Object.keys(selectedOptions).forEach(questionId => {
+                          const selectedOption = selectedOptions[questionId];
+                          const questionType = questionTypes[parseInt(questionId)];
+                          
+                          if (selectedOption !== null && selectedOption !== undefined && selectedOption !== '') {
+                              // 评分题特殊处理：保存为数值
+                              if (questionType === 'rating') {
+                                  answers[questionId] = parseInt(selectedOption);
+                              } else {
+                                  // 选择题处理
+                                  if (Array.isArray(selectedOption) && selectedOption.length > 0) {
+                                      const customInputData = {};
+
+                                      // 收集该问题的自定义输入
+                                      Object.keys(customInputs).forEach(key => {
+                                          if (key.startsWith(questionId + '_') && customInputs[key]) {
+                                              const optionId = key.split('_')[1];
+                                              customInputData[optionId] = customInputs[key];
+                                          }
+                                      });
+
+                                      // 根据是否有自定义输入决定数据格式
+                                      if (Object.keys(customInputData).length > 0) {
+                                          answers[questionId] = {
+                                              options: selectedOption,
+                                              custom_inputs: customInputData
+                                          };
+                                      } else {
+                                          answers[questionId] = selectedOption;
+                                      }
+                                  } else if (!Array.isArray(selectedOption)) {
+                                      // 单选题处理
+                                      const customInputData = {};
+
+                                      // 收集该问题的自定义输入
+                                      Object.keys(customInputs).forEach(key => {
+                                          if (key.startsWith(questionId + '_') && customInputs[key]) {
+                                              const optionId = key.split('_')[1];
+                                              customInputData[optionId] = customInputs[key];
+                                          }
+                                      });
+
+                                      // 根据是否有自定义输入决定数据格式
+                                      if (Object.keys(customInputData).length > 0) {
+                                          answers[questionId] = {
+                                              options: [selectedOption],
+                                              custom_inputs: customInputData
+                                          };
+                                      } else {
+                                          answers[questionId] = [selectedOption];
+                                      }
+                                  }
+                              }
+                          }
+                      });
+
+                      // 处理文本题答案
+                      Object.keys(textAnswers).forEach(questionId => {
+                          if (textAnswers[questionId] && textAnswers[questionId].trim()) {
+                              answers[questionId] = textAnswers[questionId].trim();
+                          }
+                      });
+
+                      const submitData = {
+                          phone: contactInfo.phone,
+                          name: contactInfo.name,
+                          answers: answers
+                      };
+
+                      const response = await fetch('/system/questionnaire/submit/{{ questionnaire.id }}', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify(submitData)
+                      });
+
+                      const result = await response.json();
+
+                      if (result.success) {
+                          submitted.value = true;
+                      } else {
+                          message.error(result.message || '提交失败，请重试');
+                      }
+
+                  } catch (error) {
+                      console.error('提交失败:', error);
+                      message.error('网络错误，请检查网络连接后重试');
+                  } finally {
+                      submitting.value = false;
+                  }
+              };
+
+              // 重新填写
+              const resetForm = () => {
+                  // 重置所有数据
+                  Object.keys(selectedOptions).forEach(key => {
+                      delete selectedOptions[key];
+                  });
+                  Object.keys(customInputs).forEach(key => {
+                      delete customInputs[key];
+                  });
+                  Object.keys(textAnswers).forEach(key => {
+                      delete textAnswers[key];
+                  });
+                  contactInfo.phone = '';
+                  contactInfo.name = '';
+                  submitted.value = false;
+                  submitting.value = false;
+              };
+
+              return {
+                  selectedOptions,
+                  customInputs,
+                  textAnswers,
+                  contactInfo,
+                  submitting,
+                  submitted,
+                  selectOption,
+                  isOptionSelected,
+                  validateRequiredFields,
+                  submitQuestionnaire,
+                  resetForm
+              };
+          }
+      }).mount('#app');
+    </script>
+  </body>
+</html>

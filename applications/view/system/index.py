@@ -12,3 +12,10 @@ def index():
     return render_template('system/index.html', user=user)
 
 
+# 控制台页面
+@bp.get('/system/console')
+@login_required
+def console():
+    return render_template('system/console/console.html')
+
+

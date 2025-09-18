@@ -7,9 +7,12 @@
 import os
 import re
 import uuid
+import io
+import base64
 from datetime import datetime
 from flask import Blueprint, request, render_template, jsonify, current_app
 from werkzeug.utils import secure_filename
+import qrcode
 from applications.common.utils.http import table_api, success_api, fail_api
 from applications.common.utils.validate import str_escape
 from applications.models.user_notice import UserNotice, UserNoticeConfirm
@@ -343,5 +346,58 @@ def get_notice_list_api():
         return jsonify(success=True, msg="成功", data=data)
     
     except Exception as e:
-        current_app.logger.error(f"获取须知列表API错误: {str(e)}")
+        current_app.logger.error(f"获取须知列表失败: {str(e)}")
         return fail_api(msg="服务器内部错误")
+
+
+@frontend_bp.route('/api/qrcode/generate', methods=['POST'])
+def generate_qrcode_api():
+    """
+    生成二维码API
+    接收URL参数，返回base64编码的二维码图片
+    """
+    try:
+        # 获取请求参数
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return fail_api(msg="缺少URL参数")
+        
+        url = data.get('url', '').strip()
+        if not url:
+            return fail_api(msg="URL不能为空")
+        
+        # 验证URL长度（避免生成过于复杂的二维码）
+        if len(url) > 2048:
+            return fail_api(msg="URL长度不能超过2048字符")
+        
+        # 创建二维码实例
+        qr = qrcode.QRCode(
+            version=1,  # 控制二维码的大小，1是最小尺寸
+            error_correction=qrcode.constants.ERROR_CORRECT_L,  # 错误纠正级别
+            box_size=10,  # 每个小方格的像素数
+            border=4,  # 边框的宽度
+        )
+        
+        # 添加数据
+        qr.add_data(url)
+        qr.make(fit=True)
+        
+        # 创建二维码图片
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        
+        # 将图片转换为base64
+        img_buffer = io.BytesIO()
+        qr_img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        
+        # 编码为base64
+        img_base64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
+        
+        return success_api(data={
+            'qrcode': f"data:image/png;base64,{img_base64}",
+            'url': url
+        }, msg="二维码生成成功")
+        
+    except Exception as e:
+        current_app.logger.error(f"生成二维码失败: {str(e)}")
+        return fail_api(msg="二维码生成失败，请稍后重试")

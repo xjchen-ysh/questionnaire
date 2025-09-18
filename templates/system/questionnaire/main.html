@@ -4,6 +4,86 @@
     <title>问卷设置</title>
     {% include 'system/common/header.html' %}
     <link rel="stylesheet" href="{{ url_for('static', filename='system/admin/css/other/user.css') }}"/>
+    <style>
+        /* Dropdown 样式 */
+        .layui-btn-group {
+            position: relative;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        .dropdown-toggle {
+            border-left: 1px solid rgba(255,255,255,0.2);
+            margin-left: -1px;
+            padding: 0 8px;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+            min-width: 120px;
+            padding: 5px 0;
+            margin: 2px 0 0;
+            background-color: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        }
+        
+        .dropdown-menu li {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .dropdown-menu li a {
+            display: block;
+            padding: 8px 15px;
+            color: #333;
+            text-decoration: none;
+            white-space: nowrap;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .dropdown-menu li a:hover {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+        
+        .dropdown-menu li a i {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        
+        /* 确保下拉菜单在表格中正确显示 */
+        /* 只对操作列应用overflow: visible样式 */
+        .layui-table-body tr td:last-child .layui-table-cell {
+            overflow: visible !important;
+        }
+        
+        .layui-table-body {
+            overflow: visible !important;
+        }
+        
+        /* 按钮组样式调整 */
+        .layui-btn-group .pear-btn {
+            float: left;
+            border-radius: 0;
+        }
+        
+        .layui-btn-group .pear-btn:first-child {
+            border-top-left-radius: 2px;
+            border-bottom-left-radius: 2px;
+        }
+        
+        .layui-btn-group .pear-btn:last-child {
+            border-top-right-radius: 2px;
+            border-bottom-right-radius: 2px;
+        }
+    </style>
 </head>
 <body class="pear-container">
 {# 查询表单 #}
@@ -65,24 +145,82 @@
 <script type="text/html" id="questionnaire-bar">
     {% raw %}
         {{# if(d.status == 0){ }}
-            <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="design"><i class="pear-icon pear-icon-design"> 设计</i>
-            </button>
-            <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="publish"><i class="pear-icon pear-icon-upload"> 发布</i>
-            </button>
+            <!-- 草稿状态：主要操作 + 下拉菜单 -->
+            <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="design"><i class="pear-icon pear-icon-design"> 设计</i></button>
+            <div class="layui-btn-group">
+                <button class="pear-btn pear-btn-primary pear-btn-sm dropdown-toggle" lay-event="dropdown">
+                    <i class="layui-icon layui-icon-down"></i>
+                </button>
+                <ul class="layui-nav-child dropdown-menu" style="display: none;">
+                    <li><a href="javascript:;" lay-event="publish"><i class="pear-icon pear-icon-upload"></i> 发布</a></li>
+                    {% endraw %}
+                    {% if authorize("system:questionnaire:edit") %}
+                    {% raw %}
+                    <li><a href="javascript:;" lay-event="edit"><i class="pear-icon pear-icon-edit"></i> 编辑</a></li>
+                    {% endraw %}
+                    {% endif %}
+                    {% if authorize("system:questionnaire:remove") %}
+                    {% raw %}
+                    {{# if(d.response_count == 0){ }}
+                    <li><a href="javascript:;" lay-event="remove"><i class="pear-icon pear-icon-ashbin"></i> 删除</a></li>
+                    {{# } }}
+                    {% endraw %}
+                    {% endif %}
+                    {% raw %}
+                </ul>
+            </div>
         {{# } else if(d.status == 1){ }}
-            <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview"><i class="pear-icon pear-icon-eye"> 预览</i>
-            </button>
+            <!-- 发布状态：主要操作 + 下拉菜单 -->
+            <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview"><i class="pear-icon pear-icon-eye"> 预览</i></button>
+            <div class="layui-btn-group">
+                <button class="pear-btn pear-btn-primary pear-btn-sm dropdown-toggle" lay-event="dropdown">
+                    更多 <i class="layui-icon layui-icon-down"></i>
+                </button>
+                <ul class="layui-nav-child dropdown-menu" style="display: none;">
+                    <li><a href="javascript:;" lay-event="share"><i class="pear-icon pear-icon-share"></i> 分享</a></li>
+                    <li><a href="javascript:;" lay-event="responses"><i class="pear-icon pear-icon-list"></i> 查看记录</a></li>
+                    {% endraw %}
+                    {% if authorize("system:questionnaire:edit") %}
+                    {% raw %}
+                    <li><a href="javascript:;" lay-event="edit"><i class="pear-icon pear-icon-edit"></i> 编辑</a></li>
+                    {% endraw %}
+                    {% endif %}
+                    {% if authorize("system:questionnaire:remove") %}
+                    {% raw %}
+                    {{# if(d.response_count == 0){ }}
+                    <li><a href="javascript:;" lay-event="remove"><i class="pear-icon pear-icon-ashbin"></i> 删除</a></li>
+                    {{# } }}
+                    {% endraw %}
+                    {% endif %}
+                    {% raw %}
+                </ul>
+            </div>
+        {{# } else { }}
+            <!-- 其他状态：只显示下拉菜单 -->
+            <div class="layui-btn-group">
+                <button class="pear-btn pear-btn-primary pear-btn-sm dropdown-toggle" lay-event="dropdown">
+                    操作 <i class="layui-icon layui-icon-down"></i>
+                </button>
+                <ul class="layui-nav-child dropdown-menu" style="display: none;">
+                    <li><a href="javascript:;" lay-event="responses"><i class="pear-icon pear-icon-list"></i> 查看记录</a></li>
+                    {% endraw %}
+                    {% if authorize("system:questionnaire:edit") %}
+                    {% raw %}
+                    <li><a href="javascript:;" lay-event="edit"><i class="pear-icon pear-icon-edit"></i> 编辑</a></li>
+                    {% endraw %}
+                    {% endif %}
+                    {% if authorize("system:questionnaire:remove") %}
+                    {% raw %}
+                    {{# if(d.response_count == 0){ }}
+                    <li><a href="javascript:;" lay-event="remove"><i class="pear-icon pear-icon-ashbin"></i> 删除</a></li>
+                    {{# } }}
+                    {% endraw %}
+                    {% endif %}
+                    {% raw %}
+                </ul>
+            </div>
         {{# } }}
     {% endraw %}
-    {% if authorize("system:questionnaire:edit") %}
-        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit"><i class="pear-icon pear-icon-edit"> 编辑</i>
-        </button>
-    {% endif %}
-    {% if authorize("system:questionnaire:remove") %}
-        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i
-                class="pear-icon pear-icon-ashbin"> 删除</i>
-        </button>
-    {% endif %}
 </script>
 
 {% raw %}
@@ -161,7 +299,7 @@
                 {title: '允许匿名', field: 'allow_anonymous', align: 'center', templet: '#questionnaire-anonymous', width: 100},
                 {title: '需要登录', field: 'require_login', align: 'center', templet: '#questionnaire-login', width: 100},
                 {title: '创建时间', field: 'create_at', templet: '#questionnaire-createTime', align: 'center', width: 120},
-                {title: '操作', toolbar: '#questionnaire-bar', align: 'center', width: 240, fixed: 'right'}
+                {title: '操作', toolbar: '#questionnaire-bar', align: 'center', width: 200, fixed: 'right'}
             ]
         ]
 
@@ -228,8 +366,32 @@
                 window.publish(obj)
             } else if (obj.event === 'preview') {
                 window.preview(obj)
+            } else if (obj.event === 'share') {
+                window.share(obj)
+            } else if (obj.event === 'responses') {
+                window.responses(obj);
+            } else if (obj.event === 'dropdown') {
+                // 处理下拉菜单点击
+                let $dropdown = $(obj.tr).find('.dropdown-menu');
+                let $toggle = $(obj.tr).find('.dropdown-toggle');
+                
+                // 关闭其他已打开的下拉菜单
+                $('.dropdown-menu').not($dropdown).hide();
+                
+                // 切换当前下拉菜单
+                $dropdown.toggle();
+                
+                // 阻止事件冒泡
+                event.stopPropagation();
             }
         })
+
+        // 下拉菜单项点击事件
+
+        // 点击其他地方关闭下拉菜单
+        $(document).on('click', function() {
+            $('.dropdown-menu').hide();
+        });
 
         table.on('toolbar(questionnaire-table)', function (obj) {
             if (obj.event === 'add') {
@@ -342,6 +504,68 @@
             })
         }
 
+        window.share = function (obj) {
+            // 分享问卷
+            let shareUrl = window.location.origin + '/system/questionnaire/fill/' + obj.data['id'];
+            let shareContent = `
+                <div style="padding: 20px;">
+                    <h3 style="margin-bottom: 15px;">分享问卷：${obj.data['title']}</h3>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">分享链接：</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="text" id="shareUrl" value="${shareUrl}" readonly 
+                                   style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
+                            <button type="button" id="copyUrlBtn" class="pear-btn pear-btn-primary pear-btn-sm">
+                                <i class="layui-icon layui-icon-file"></i> 复制链接
+                            </button>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="margin-bottom: 10px; font-weight: bold;">扫描二维码填写：</div>
+                        <div id="qrcode" style="display: inline-block;"></div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px; font-size: 12px; color: #666;">
+                        <i class="layui-icon layui-icon-tips"></i> 
+                        用户可通过此链接或二维码访问并填写问卷
+                    </div>
+                </div>
+            `;
+            
+            layer.open({
+                type: 1,
+                title: '分享问卷',
+                area: ['500px', '450px'],
+                content: shareContent,
+                success: function(layero, index) {
+                    // 生成二维码 - 优先使用本地API
+                    generateQRCode(shareUrl, 'qrcode');
+                    
+                    // 复制链接功能
+                    document.getElementById('copyUrlBtn').onclick = function() {
+                        let shareUrlInput = document.getElementById('shareUrl');
+                        shareUrlInput.select();
+                        shareUrlInput.setSelectionRange(0, 99999);
+                        
+                        try {
+                            document.execCommand('copy');
+                            layer.msg('链接已复制到剪贴板', {icon: 1, time: 2000});
+                        } catch (err) {
+                            // 如果复制失败，尝试使用现代API
+                            if (navigator.clipboard) {
+                                navigator.clipboard.writeText(shareUrl).then(function() {
+                                    layer.msg('链接已复制到剪贴板', {icon: 1, time: 2000});
+                                }).catch(function() {
+                                    layer.msg('复制失败，请手动复制链接', {icon: 2, time: 2000});
+                                });
+                            } else {
+                                layer.msg('复制失败，请手动复制链接', {icon: 2, time: 2000});
+                            }
+                        }
+                    };
+                }
+            });
+        }
+
         window.remove = function (obj) {
             layer.confirm('确定要删除该用户', {icon: 3, title: '提示'}, function (index) {
                 layer.close(index)
@@ -367,6 +591,61 @@
 
         window.refresh = function (param) {
             table.reload('questionnaire-table', {where: param})
+        }
+
+        window.responses = function (obj) {
+            // 打开问卷填写记录查看页面
+            parent.layui.tab.addTabOnlyByElem("content", {
+                id: 'questionnaire-records-' + obj.data.id,
+                title: '问卷填写记录 - ' + obj.data['title'],
+                url:  MODULE_PATH + 'responses/' + obj.data['id'],
+                close: true
+            });
+        }
+
+        // 二维码生成函数
+        window.generateQRCode = function(url, containerId) {
+            // 优先使用前端QRCode库
+            if (typeof QRCode !== 'undefined') {
+                try {
+                    new QRCode(document.getElementById(containerId), {
+                        text: url,
+                        width: 150,
+                        height: 150,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff"
+                    });
+                    return;
+                } catch (e) {
+                    console.warn('前端QRCode库生成失败，尝试使用后端API:', e);
+                }
+            }
+            
+            // 使用后端API生成二维码
+            $.ajax({
+                url: '/api/qrcode/generate',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({url: url}),
+                success: function(result) {
+                    if (result.success && result.data && result.data.qrcode) {
+                        document.getElementById(containerId).innerHTML = 
+                            '<img src="' + result.data.qrcode + '" alt="二维码" style="border: 1px solid #ddd; width: 150px; height: 150px;">';
+                    } else {
+                        // 最后的fallback：使用第三方API
+                        document.getElementById(containerId).innerHTML = 
+                            '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + 
+                            encodeURIComponent(url) + '" alt="二维码" style="border: 1px solid #ddd;">';
+                    }
+                },
+                error: function() {
+                    console.warn('后端二维码API调用失败，使用第三方API');
+                    // 最后的fallback：使用第三方API
+                    document.getElementById(containerId).innerHTML = 
+                        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + 
+                        encodeURIComponent(url) + '" alt="二维码" style="border: 1px solid #ddd;">';
+                }
+            });
         }
     })
 </script>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>确认记录管理</title>
+    {% include 'system/common/header.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='system/admin/css/other/user.css') }}"/>
+    <script src="{{ url_for('static', filename='system/component/layui/layui.js') }}"></script>
+    <script src="{{ url_for('static', filename='system/component/pear/pear.js') }}"></script>
+</head>
+<body class="pear-container">
+{# 查询表单 #}
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form" action="" lay-filter="confirm-query-form">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">须知ID</label>
+                    <div class="layui-input-inline">
+                        <input type="number" name="notice_id" placeholder="请输入须知ID" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">手机号</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="phone" placeholder="请输入手机号" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">确认方式</label>
+                    <div class="layui-input-inline">
+                        <select name="confirm_method" lay-search="">
+                            <option value="">全部方式</option>
+                            <option value="web">网页确认</option>
+                            <option value="mobile">手机确认</option>
+                            <option value="api">API确认</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">状态</label>
+                    <div class="layui-input-inline">
+                        <select name="status" lay-search="">
+                            <option value="">全部状态</option>
+                            <option value="0">取消确认</option>
+                            <option value="1">已确认</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="confirm-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# 确认记录表格 #}
+<div class="layui-card">
+    <div class="layui-card-body">
+        <table id="confirm-table" lay-filter="confirm-table"></table>
+    </div>
+</div>
+
+{# 表格工具栏 #}
+<script type="text/html" id="confirm-toolbar">
+    {% if authorize("system:notice:confirm:export") %}
+        <button class="pear-btn pear-btn-success pear-btn-md" lay-event="export">
+            <i class="pear-icon pear-icon-download"></i>
+            导出记录
+        </button>
+    {% endif %}
+    <button class="pear-btn pear-btn-success pear-btn-md" lay-event="refresh">
+        <i class="layui-icon layui-icon-refresh"></i>
+        刷新
+    </button>
+</script>
+
+{# 行操作按钮 #}
+<script type="text/html" id="confirm-bar">
+    <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="detail">
+        <i class="pear-icon pear-icon-eye"></i> 详情
+    </button>
+    {% raw %}
+        {{# if(d.photo_paths_list && d.photo_paths_list.length > 0){ }}
+            <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="photos">
+                <i class="pear-icon pear-icon-picture"></i> 查看照片
+            </button>
+        {{# } }}
+    {% endraw %}
+</script>
+
+{# 状态显示模板 #}
+{% raw %}
+<script type="text/html" id="confirm-status">
+    {{# if(d.status == 0){ }}
+        <span class="layui-badge layui-bg-gray">取消确认</span>
+    {{# } else if(d.status == 1){ }}
+        <span class="layui-badge layui-bg-green">已确认</span>
+    {{# } }}
+</script>
+{% endraw %}
+
+{# 确认方式显示模板 #}
+{% raw %}
+<script type="text/html" id="confirm-method">
+    {{# if(d.confirm_method == 'web'){ }}
+        <span class="layui-badge layui-bg-blue">网页确认</span>
+    {{# } else if(d.confirm_method == 'mobile'){ }}
+        <span class="layui-badge layui-bg-green">手机确认</span>
+    {{# } else if(d.confirm_method == 'api'){ }}
+        <span class="layui-badge layui-bg-orange">API确认</span>
+    {{# } }}
+</script>
+{% endraw %}
+
+{# 手机号显示模板 #}
+{% raw %}
+<script type="text/html" id="phone-display">
+    {{# if(d.phone){ }}
+        {{ d.phone }}
+    {{# } else { }}
+        <span class="layui-text-muted">未填写</span>
+    {{# } }}
+</script>
+{% endraw %}
+
+<script>
+layui.use(['table', 'form', 'layer'], function () {
+    let table = layui.table;
+    let form = layui.form;
+    let layer = layui.layer;
+
+    // 初始化表格
+    let cols = [
+        [
+            {type: 'checkbox', fixed: 'left'},
+            {field: 'id', title: 'ID', width: 80, sort: true},
+            {field: 'notice_id', title: '须知ID', width: 100},
+            {field: 'notice_title', title: '须知标题', width: 200},
+            {field: 'notice_type_text', title: '须知类型', width: 120},
+            {field: 'phone', title: '手机号', width: 150, templet: '#phone-display'},
+            {field: 'confirm_method', title: '确认方式', width: 120, templet: '#confirm-method'},
+            {field: 'status', title: '状态', width: 100, templet: '#confirm-status'},
+            {field: 'user_ip', title: 'IP地址', width: 140},
+            {field: 'create_at', title: '确认时间', width: 160, sort: true},
+            {field: 'update_at', title: '更新时间', width: 160},
+            {title: '操作', toolbar: '#confirm-bar', width: 200, fixed: 'right'}
+        ]
+    ];
+
+    table.render({
+        elem: '#confirm-table',
+        url: '{{ url_for("system.notice.confirm_data") }}',
+        toolbar: '#confirm-toolbar',
+        defaultToolbar: ['filter', 'exports', 'print'],
+        cols: cols,
+        page: true,
+        parseData: function (res) {
+            return {
+                "code": res.code,
+                "msg": res.msg,
+                "count": res.count,
+                "data": res.data
+            };
+        },
+        request: {
+            pageName: 'page',
+            limitName: 'limit'
+        }
+    });
+
+    // 工具栏事件
+    table.on('toolbar(confirm-table)', function (obj) {
+        if (obj.event === 'export') {
+            // 获取当前查询条件
+            let queryData = {};
+            $('.layui-form input, .layui-form select').each(function() {
+                let name = $(this).attr('name');
+                let value = $(this).val();
+                if (name && value) {
+                    queryData[name] = value;
+                }
+            });
+            
+            // 构建导出URL
+            let exportUrl = '{{ url_for("system.notice.confirm_export") }}';
+            let params = new URLSearchParams(queryData);
+            if (params.toString()) {
+                exportUrl += '?' + params.toString();
+            }
+            
+            // 下载文件
+            window.open(exportUrl, '_blank');
+        } else if (obj.event === 'refresh') {
+            table.reload('confirm-table');
+        }
+    });
+
+    // 行工具事件
+    table.on('tool(confirm-table)', function (obj) {
+        let data = obj.data;
+        if (obj.event === 'detail') {
+            // 在框架内打开详情页面
+            parent.layui.tab.addTabOnlyByElem("content", {
+                id: "notice-detail-" + data.id,
+                title: "通知详情",
+                url: '/system/notice/confirm/detail/' + data.id,
+                close: true
+            });
+        } else if (obj.event === 'photos') {
+            // 显示照片
+            if (data.photo_paths_list && data.photo_paths_list.length > 0) {
+                let photoHtml = '<div style="padding: 20px; text-align: center;">';
+                data.photo_paths_list.forEach(function(path, index) {
+                    photoHtml += `
+                        <div style="margin-bottom: 15px;">
+                            <p>照片 ${index + 1}:</p>
+                            <img src="${path}" style="max-width: 100%; max-height: 300px; border: 1px solid #ddd;" onclick="layer.photos({photos: {data: [{src: '${path}'}]}, anim: 5})">
+                        </div>
+                    `;
+                });
+                photoHtml += '</div>';
+                
+                layer.open({
+                    type: 1,
+                    title: '确认照片',
+                    area: ['600px', '500px'],
+                    content: photoHtml
+                });
+            } else {
+                layer.msg('该记录没有上传照片', {icon: 0});
+            }
+        }
+    });
+
+    // 搜索表单提交
+    form.on('submit(confirm-query)', function (data) {
+        table.reload('confirm-table', {
+            where: data.field,
+            page: {curr: 1}
+        });
+        return false;
+    });
+});
+</script>
+
+</body>
+</html>

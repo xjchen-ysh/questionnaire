@@ -333,18 +333,18 @@
         <!-- 头部 -->
         <div class="header">
             <h1>{{ notice.title }}</h1>
-            <div class="meta">
+            <!-- <div class="meta">
                 {{ notice.notice_type_text }} · 版本 {{ notice.version }}
                 {% if notice.effective_date %}
                 · 生效时间: {{ notice.effective_date.strftime('%Y-%m-%d') }}
                 {% endif %}
-            </div>
+            </div> -->
         </div>
         
         <!-- 内容区域 -->
         <div class="content">
             <!-- 须知信息 -->
-            <div class="notice-info">
+            <!-- <div class="notice-info">
                 <div class="item">
                     <span class="label">须知类型:</span>
                     <span class="value">{{ notice.notice_type_text }}</span>
@@ -369,7 +369,7 @@
                     <span class="label">是否必须确认:</span>
                     <span class="value">{{ '是' if notice.is_required else '否' }}</span>
                 </div>
-            </div>
+            </div> -->
             
             <!-- 须知内容 -->
             <div class="notice-content">

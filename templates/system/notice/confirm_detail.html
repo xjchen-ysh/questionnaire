@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>确认记录详情</title>
+    {% include 'system/common/header.html' %}
+</head>
+<body class="pear-container">
+<div class="layui-fluid" style="padding: 10px;">
+<div class="layui-card">
+    <div class="layui-card-header">
+        <span class="layui-icon layui-icon-file"></span>
+        确认记录详情
+    </div>
+    <div class="layui-card-body">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md8">
+                <div class="layui-card">
+                    <div class="layui-card-header">基本信息</div>
+                    <div class="layui-card-body">
+                        <table class="layui-table" lay-skin="nob">
+                            <tbody>
+                                <tr>
+                                    <td width="120" style="background-color: #f8f8f8;"><strong>确认记录ID</strong></td>
+                                    <td>{{ confirm.id }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>须知ID</strong></td>
+                                    <td>{{ confirm.notice_id }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>须知标题</strong></td>
+                                    <td>{{ confirm.notice.title if confirm.notice else '未知' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>手机号</strong></td>
+                                    <td>{{ confirm.phone or '未填写' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>确认方式</strong></td>
+                                    <td>
+                                        {% if confirm.confirm_method == 'web' %}
+                                            <span class="layui-badge layui-bg-blue">网页确认</span>
+                                        {% elif confirm.confirm_method == 'mobile' %}
+                                            <span class="layui-badge layui-bg-green">手机确认</span>
+                                        {% elif confirm.confirm_method == 'api' %}
+                                            <span class="layui-badge layui-bg-orange">API确认</span>
+                                        {% else %}
+                                            <span class="layui-badge layui-bg-gray">{{ confirm.confirm_method or '未知' }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>确认状态</strong></td>
+                                    <td>
+                                        {% if confirm.status == 1 %}
+                                            <span class="layui-badge layui-bg-green">已确认</span>
+                                        {% else %}
+                                            <span class="layui-badge layui-bg-orange">待确认</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>确认时间</strong></td>
+                                    <td>{{ confirm.create_at.strftime('%Y-%m-%d %H:%M:%S') if confirm.create_at else '未确认' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>创建时间</strong></td>
+                                    <td>{{ confirm.create_at.strftime('%Y-%m-%d %H:%M:%S') if confirm.create_at else '' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #f8f8f8;"><strong>更新时间</strong></td>
+                                    <td>{{ confirm.update_at.strftime('%Y-%m-%d %H:%M:%S') if confirm.update_at else '' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 用户须知内容 -->
+                {% if confirm.notice %}
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <span class="layui-icon layui-icon-notice"></span>
+                        用户须知内容
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="layui-row layui-col-space15">
+                            <div class="layui-col-md12">
+                                <table class="layui-table" lay-skin="nob">
+                                    <tbody>
+                                        <tr>
+                                            <td width="120" style="background-color: #f8f8f8;"><strong>须知标题</strong></td>
+                                            <td>{{ confirm.notice.title }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="background-color: #f8f8f8;"><strong>须知类型</strong></td>
+                                            <td>{{ confirm.notice.type_text }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="background-color: #f8f8f8;"><strong>版本号</strong></td>
+                                            <td>{{ confirm.notice.version }}</td>
+                                        </tr>
+                                        {% if confirm.notice.effective_date %}
+                                        <tr>
+                                            <td style="background-color: #f8f8f8;"><strong>生效日期</strong></td>
+                                            <td>{{ confirm.notice.effective_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if confirm.notice.expiry_date %}
+                                        <tr>
+                                            <td style="background-color: #f8f8f8;"><strong>失效日期</strong></td>
+                                            <td>{{ confirm.notice.expiry_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="layui-row" style="margin-top: 15px;">
+                            <div class="layui-col-md12">
+                                <div style="background-color: #f8f8f8; padding: 15px; border-radius: 4px;">
+                                    <h4 style="margin: 0 0 10px 0; color: #333;">须知内容：</h4>
+                                    <div class="layui-text" style="line-height: 1.8; color: #666;">
+                                        {{ confirm.notice.content | safe }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% if confirm.notice.attachment_path and confirm.notice.attachment_name %}
+                        <div class="layui-row" style="margin-top: 15px;">
+                            <div class="layui-col-md12">
+                                <div style="padding: 10px; border: 1px dashed #ddd; border-radius: 4px; text-align: center;">
+                                    <span class="layui-icon layui-icon-file" style="font-size: 16px; color: #1E9FFF;"></span>
+                                    <a href="{{ confirm.notice.attachment_path }}" download="{{ confirm.notice.attachment_name }}" 
+                                       style="color: #1E9FFF; text-decoration: none; margin-left: 5px;">
+                                        下载附件: {{ confirm.notice.attachment_name }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if confirm.remark %}
+                <div class="layui-card">
+                    <div class="layui-card-header">备注信息</div>
+                    <div class="layui-card-body">
+                        <div class="layui-text">
+                            {{ confirm.remark }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="layui-col-md4">
+                {% if confirm.photo_paths_list and confirm.photo_paths_list|length > 0 %}
+                <div class="layui-card">
+                    <div class="layui-card-header">确认照片 ({{ confirm.photo_paths_list|length }}张)</div>
+                    <div class="layui-card-body">
+                        {% for photo_path in confirm.photo_paths_list %}
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <p class="layui-text-muted">照片 {{ loop.index }}:</p>
+                            <img src="{{ photo_path }}" 
+                                 style="max-width: 100%; max-height: 250px; cursor: pointer; border: 1px solid #ddd;" 
+                                 onclick="previewPhotos({{ loop.index0 }})"
+                                 alt="确认照片{{ loop.index }}">
+                        </div>
+                        {% endfor %}
+                        <p class="layui-text-muted" style="margin-top: 10px; text-align: center;">点击查看大图</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% include 'system/common/footer.html' %}
+<script>
+layui.use(['layer'], function(){
+    var layer = layui.layer;
+    
+    // 获取所有照片路径
+    var photoPaths = [
+        {% for photo_path in confirm.photo_paths_list %}
+        "{{ photo_path }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // 多张照片预览功能
+    window.previewPhotos = function(startIndex) {
+        if (!photoPaths || photoPaths.length === 0) {
+            layer.msg('没有照片可预览');
+            return;
+        }
+        
+        // 构建照片数据
+        var photoData = [];
+        for (var i = 0; i < photoPaths.length; i++) {
+            photoData.push({
+                "alt": "确认照片" + (i + 1),
+                "pid": i + 1,
+                "src": photoPaths[i],
+                "thumb": photoPaths[i]
+            });
+        }
+        
+        layer.photos({
+            photos: {
+                "title": "确认照片",
+                "start": startIndex,
+                "data": photoData
+            },
+            anim: 5
+        });
+    };
+});
+</script>
+</body>
+</html>
