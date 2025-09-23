@@ -64,10 +64,6 @@
             overflow: visible !important;
         }
         
-        .layui-table-body {
-            overflow: visible !important;
-        }
-        
         /* 按钮组样式调整 */
         .layui-btn-group .pear-btn {
             float: left;
@@ -145,80 +141,61 @@
 <script type="text/html" id="questionnaire-bar">
     {% raw %}
         {{# if(d.status == 0){ }}
-            <!-- 草稿状态：主要操作 + 下拉菜单 -->
-            <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="design"><i class="pear-icon pear-icon-design"> 设计</i></button>
-            <div class="layui-btn-group">
-                <button class="pear-btn pear-btn-primary pear-btn-sm dropdown-toggle" lay-event="dropdown">
-                    <i class="layui-icon layui-icon-down"></i>
-                </button>
-                <ul class="layui-nav-child dropdown-menu" style="display: none;">
-                    <li><a href="javascript:;" lay-event="publish"><i class="pear-icon pear-icon-upload"></i> 发布</a></li>
-                    {% endraw %}
-                    {% if authorize("system:questionnaire:edit") %}
-                    {% raw %}
-                    <li><a href="javascript:;" lay-event="edit"><i class="pear-icon pear-icon-edit"></i> 编辑</a></li>
-                    {% endraw %}
-                    {% endif %}
-                    {% if authorize("system:questionnaire:remove") %}
-                    {% raw %}
-                    {{# if(d.response_count == 0){ }}
-                    <li><a href="javascript:;" lay-event="remove"><i class="pear-icon pear-icon-ashbin"></i> 删除</a></li>
-                    {{# } }}
-                    {% endraw %}
-                    {% endif %}
-                    {% raw %}
-                </ul>
-            </div>
+            <a href="javascript:;" lay-event="design"><i class="pear-icon"></i> 设计</a>
+            <span>|</span>
+            <a href="javascript:;" lay-event="publish"><i class="pear-icon"></i> 发布</a>
+            {% endraw %}
+            {% if authorize("system:questionnaire:edit") %}
+            <span>|</span>
+            <a href="javascript:;" lay-event="edit"><i class="pear-icon"></i> 编辑</a>
+            {% endif %}
+            {% if authorize("system:questionnaire:remove") %}
+                {% raw %}
+                {{# if(d.response_count == 0){ }}
+                <span>|</span>
+                <a href="javascript:;" lay-event="remove"><i class="pear-icon"></i> 删除</a>
+                {{# } }}
+                {% endraw %}
+            {% endif %}
+            {% raw %}
         {{# } else if(d.status == 1){ }}
             <!-- 发布状态：主要操作 + 下拉菜单 -->
-            <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview"><i class="pear-icon pear-icon-eye"> 预览</i></button>
-            <div class="layui-btn-group">
-                <button class="pear-btn pear-btn-primary pear-btn-sm dropdown-toggle" lay-event="dropdown">
-                    更多 <i class="layui-icon layui-icon-down"></i>
-                </button>
-                <ul class="layui-nav-child dropdown-menu" style="display: none;">
-                    <li><a href="javascript:;" lay-event="share"><i class="pear-icon pear-icon-share"></i> 分享</a></li>
-                    <li><a href="javascript:;" lay-event="responses"><i class="pear-icon pear-icon-list"></i> 查看记录</a></li>
-                    {% endraw %}
-                    {% if authorize("system:questionnaire:edit") %}
-                    {% raw %}
-                    <li><a href="javascript:;" lay-event="edit"><i class="pear-icon pear-icon-edit"></i> 编辑</a></li>
-                    {% endraw %}
-                    {% endif %}
-                    {% if authorize("system:questionnaire:remove") %}
-                    {% raw %}
-                    {{# if(d.response_count == 0){ }}
-                    <li><a href="javascript:;" lay-event="remove"><i class="pear-icon pear-icon-ashbin"></i> 删除</a></li>
-                    {{# } }}
-                    {% endraw %}
-                    {% endif %}
-                    {% raw %}
-                </ul>
-            </div>
+            <a href="javascript:;" lay-event="preview"><i class="pear-icon"></i> 预览</a>
+            <span>|</span>
+            <a href="javascript:;" lay-event="share"><i class="pear-icon"></i> 分享</a>
+            <span>|</span>
+            <a href="javascript:;" lay-event="responses"><i class="pear-icon"></i> 记录</a>
+            {% endraw %}
+            {% if authorize("system:questionnaire:edit") %}
+            <span>|</span>
+            <a href="javascript:;" lay-event="edit"><i class="pear-icon"></i> 编辑</a>
+            {% endif %}
+            {% if authorize("system:questionnaire:remove") %}
+            {% raw %}
+            {{# if(d.response_count == 0){ }}
+            <span>|</span>
+            <a href="javascript:;" lay-event="remove"><i class="pear-icon"></i> 删除</a>
+            {{# } }}
+            {% endraw %}
+            {% endif %}
+            {% raw %}
         {{# } else { }}
             <!-- 其他状态：只显示下拉菜单 -->
-            <div class="layui-btn-group">
-                <button class="pear-btn pear-btn-primary pear-btn-sm dropdown-toggle" lay-event="dropdown">
-                    操作 <i class="layui-icon layui-icon-down"></i>
-                </button>
-                <ul class="layui-nav-child dropdown-menu" style="display: none;">
-                    <li><a href="javascript:;" lay-event="responses"><i class="pear-icon pear-icon-list"></i> 查看记录</a></li>
-                    {% endraw %}
-                    {% if authorize("system:questionnaire:edit") %}
-                    {% raw %}
-                    <li><a href="javascript:;" lay-event="edit"><i class="pear-icon pear-icon-edit"></i> 编辑</a></li>
-                    {% endraw %}
-                    {% endif %}
-                    {% if authorize("system:questionnaire:remove") %}
-                    {% raw %}
-                    {{# if(d.response_count == 0){ }}
-                    <li><a href="javascript:;" lay-event="remove"><i class="pear-icon pear-icon-ashbin"></i> 删除</a></li>
-                    {{# } }}
-                    {% endraw %}
-                    {% endif %}
-                    {% raw %}
-                </ul>
-            </div>
+            <a href="javascript:;" lay-event="responses"><i class="pear-icon"></i> 记录</a>
+            {% endraw %}
+            {% if authorize("system:questionnaire:edit") %}
+            {% raw %}
+            <a href="javascript:;" lay-event="edit"><i class="pear-icon"></i> 编辑</a>
+            {% endraw %}
+            {% endif %}
+            {% if authorize("system:questionnaire:remove") %}
+            {% raw %}
+            {{# if(d.response_count == 0){ }}
+            <a href="javascript:;" lay-event="remove"><i class="pear-icon"></i> 删除</a>
+            {{# } }}
+            {% endraw %}
+            {% endif %}
+            {% raw %}
         {{# } }}
     {% endraw %}
 </script>
@@ -295,9 +272,9 @@
                 {title: '状态', field: 'status', align: 'center', templet: '#questionnaire-status', width: 100},
                 {title: '开始时间', field: 'start_time', templet: '#questionnaire-startTime', align: 'center', width: 120},
                 {title: '结束时间', field: 'end_time', templet: '#questionnaire-endTime', align: 'center', width: 120},
-                {title: '最大回答数', field: 'max_responses', align: 'center', width: 100},
-                {title: '允许匿名', field: 'allow_anonymous', align: 'center', templet: '#questionnaire-anonymous', width: 100},
-                {title: '需要登录', field: 'require_login', align: 'center', templet: '#questionnaire-login', width: 100},
+                // {title: '最大回答数', field: 'max_responses', align: 'center', width: 100},
+                // {title: '允许匿名', field: 'allow_anonymous', align: 'center', templet: '#questionnaire-anonymous', width: 100},
+                // {title: '需要登录', field: 'require_login', align: 'center', templet: '#questionnaire-login', width: 100},
                 {title: '创建时间', field: 'create_at', templet: '#questionnaire-createTime', align: 'center', width: 120},
                 {title: '操作', toolbar: '#questionnaire-bar', align: 'center', width: 200, fixed: 'right'}
             ]
