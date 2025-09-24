@@ -1,276 +1,279 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>须知管理</title>
     {% include 'system/common/header.html' %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='system/admin/css/other/user.css') }}"/>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='system/admin/css/other/user.css') }}"
+    />
     <script src="{{ url_for('static', filename='system/component/layui/layui.js') }}"></script>
     <script src="{{ url_for('static', filename='system/component/pear/pear.js') }}"></script>
-</head>
-<body class="pear-container">
-{# 查询表单 #}
-<div class="layui-card">
-    <div class="layui-card-body">
+  </head>
+  <body class="pear-container">
+    {# 查询表单 #}
+    <div class="layui-card">
+      <div class="layui-card-body">
         <form class="layui-form" action="" lay-filter="notice-query-form">
-            <div class="layui-form-item">
-                <div class="layui-inline">
-                    <label class="layui-form-label">须知标题</label>
-                    <div class="layui-input-inline">
-                        <input type="text" name="title" placeholder="请输入须知标题" class="layui-input">
-                    </div>
-                </div>
-                <div class="layui-inline">
-                    <label class="layui-form-label">须知类型</label>
-                    <div class="layui-input-inline">
-                        <select name="notice_type" lay-search="">
-                            <option value="">全部类型</option>
-                            <option value="general">通用须知</option>
-                            <option value="privacy">隐私政策</option>
-                            <option value="terms">服务条款</option>
-                            <option value="safety">安全须知</option>
-                            <option value="system">系统须知</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="layui-inline">
-                    <label class="layui-form-label">状态</label>
-                    <div class="layui-input-inline">
-                        <select name="status" lay-search="">
-                            <option value="">全部状态</option>
-                            <option value="0">禁用</option>
-                            <option value="1">启用</option>
-                            <option value="2">归档</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="layui-inline">
-                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="notice-query">
-                        <i class="layui-icon layui-icon-search"></i>
-                        查询
-                    </button>
-                    <button type="reset" class="pear-btn pear-btn-md">
-                        <i class="layui-icon layui-icon-refresh"></i>
-                        重置
-                    </button>
-                </div>
+          <div class="layui-form-item">
+            <div class="layui-inline">
+              <label class="layui-form-label">须知标题</label>
+              <div class="layui-input-inline">
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="请输入须知标题"
+                  class="layui-input"
+                />
+              </div>
             </div>
+            <div class="layui-inline">
+              <label class="layui-form-label">须知类型</label>
+              <div class="layui-input-inline">
+                <select name="notice_type" lay-search="">
+                  <option value="">全部类型</option>
+                  <option value="general">通用须知</option>
+                  <option value="privacy">隐私政策</option>
+                  <option value="terms">服务条款</option>
+                  <option value="safety">安全须知</option>
+                  <option value="system">系统须知</option>
+                </select>
+              </div>
+            </div>
+            <div class="layui-inline">
+              <label class="layui-form-label">状态</label>
+              <div class="layui-input-inline">
+                <select name="status" lay-search="">
+                  <option value="">全部状态</option>
+                  <option value="0">禁用</option>
+                  <option value="1">启用</option>
+                  <option value="2">归档</option>
+                </select>
+              </div>
+            </div>
+            <div class="layui-inline">
+              <button
+                class="pear-btn pear-btn-md pear-btn-primary"
+                lay-submit
+                lay-filter="notice-query"
+              >
+                <i class="layui-icon layui-icon-search"></i>
+                查询
+              </button>
+              <button type="reset" class="pear-btn pear-btn-md">
+                <i class="layui-icon layui-icon-refresh"></i>
+                重置
+              </button>
+            </div>
+          </div>
         </form>
+      </div>
     </div>
-</div>
 
-{# 须知表格 #}
-<div class="layui-card">
-    <div class="layui-card-body">
+    {# 须知表格 #}
+    <div class="layui-card">
+      <div class="layui-card-body">
         <table id="notice-table" lay-filter="notice-table"></table>
+      </div>
     </div>
-</div>
 
-{# 表格工具栏 #}
-<script type="text/html" id="notice-toolbar">
-    {% if authorize("system:notice:add") %}
-        <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
-            <i class="pear-icon pear-icon-add"></i>
-            新增须知
-        </button>
-    {% endif %}
-    <button class="pear-btn pear-btn-success pear-btn-md" lay-event="refresh">
+    {# 表格工具栏 #}
+    <script type="text/html" id="notice-toolbar">
+      {% if authorize("system:notice:add") %}
+      <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+        <i class="pear-icon pear-icon-add"></i>
+        新增须知
+      </button>
+      {% endif %}
+      <button class="pear-btn pear-btn-success pear-btn-md" lay-event="refresh">
         <i class="layui-icon layui-icon-refresh"></i>
         刷新
-    </button>
-</script>
+      </button>
+    </script>
 
-{# 行操作按钮 #}
-<script type="text/html" id="notice-bar">
-    {% raw %}
-        {{# if(d.status == 1){ }}
-            <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview">
-                <i class="pear-icon pear-icon-eye"></i> 预览
-            </button>
-            <button class="pear-btn pear-btn-warm pear-btn-sm" lay-event="share">
-                <i class="layui-icon layui-icon-share"></i> 分享
-            </button>
-        {{# } }}
-    {% endraw %}
-    {% raw %}
-        {{# if(d.confirmation_count > 0){ }}
-    {% endraw %}
-    {% if authorize("system:notice:confirm:main") %}
-        <button class="pear-btn pear-btn-success pear-btn-sm" lay-event="confirm-records">
-            <i class="pear-icon pear-icon-list"></i> 记录
-        </button>
-    {% endif %}
-    {% raw %}
-        {{# } }}
-    {% endraw %}
-    {% raw %}
-        {{# if(d.status != 1){ }}
-    {% endraw %}
-    {% if authorize("system:notice:edit") %}
-        <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit">
-            编辑
-        </button>
-    {% endif %}
-    {% raw %}
-        {{# } }}
-    {% endraw %}
-    {% raw %}
-        {{# if(d.confirmation_count == 0){ }}
-    {% endraw %}
-    {% if authorize("system:notice:remove") %}
-        <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove">
-            删除
-        </button>
-    {% endif %}
-    {% raw %}
-        {{# } }}
-    {% endraw %}
-</script>
+    {# 行操作按钮 #}
+    <script type="text/html" id="notice-bar">
+      {% raw %} {{# if(d.status == 1){ }}
+      <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="preview">
+        预览
+      </button>
+      <button class="pear-btn pear-btn-warm pear-btn-sm" lay-event="share">
+        分享
+      </button>
+      {{# } }} {% endraw %} {% raw %} {{# if(d.confirmation_count > 0){ }} {%
+      endraw %} {% if authorize("system:notice:confirm:main") %}
+      <button
+        class="pear-btn pear-btn-success pear-btn-sm"
+        lay-event="confirm-records"
+      >
+        记录
+      </button>
+      {% endif %} {% raw %} {{# } }} {% endraw %} {% raw %} {{# if(d.status !=
+      1){ }} {% endraw %} {% if authorize("system:notice:edit") %}
+      <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit">
+        编辑
+      </button>
+      {% endif %} {% raw %} {{# } }} {% endraw %} {% raw %} {{#
+      if(d.confirmation_count == 0){ }} {% endraw %} {% if
+      authorize("system:notice:remove") %}
+      <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove">
+        删除
+      </button>
+      {% endif %} {% raw %} {{# } }} {% endraw %}
+    </script>
 
-{# 状态显示模板 #}
-{% raw %}
-<script type="text/html" id="notice-status">
-    {{# if(d.status == 0){ }}
-        <span class="layui-badge layui-bg-gray">禁用</span>
-    {{# } else if(d.status == 1){ }}
-        <span class="layui-badge layui-bg-green">启用</span>
-    {{# } else if(d.status == 2){ }}
-        <span class="layui-badge layui-bg-blue">归档</span>
-    {{# } }}
-</script>
-{% endraw %}
+    {# 状态显示模板 #} {% raw %}
+    <script type="text/html" id="notice-status">
+      {{# if(d.status == 0){ }}
+      <span class="layui-badge layui-bg-gray">禁用</span>
+      {{# } else if(d.status == 1){ }}
+      <span class="layui-badge layui-bg-green">启用</span>
+      {{# } else if(d.status == 2){ }}
+      <span class="layui-badge layui-bg-blue">归档</span>
+      {{# } }}
+    </script>
+    {% endraw %} {# 类型显示模板 #} {% raw %}
+    <script type="text/html" id="notice-type">
+      {{# if(d.notice_type == 'general'){ }}
+      <span class="layui-badge layui-bg-cyan">通用须知</span>
+      {{# } else if(d.notice_type == 'privacy'){ }}
+      <span class="layui-badge layui-bg-orange">隐私政策</span>
+      {{# } else if(d.notice_type == 'terms'){ }}
+      <span class="layui-badge layui-bg-blue">服务条款</span>
+      {{# } else if(d.notice_type == 'safety'){ }}
+      <span class="layui-badge layui-bg-red">安全须知</span>
+      {{# } else if(d.notice_type == 'system'){ }}
+      <span class="layui-badge layui-bg-purple">系统须知</span>
+      {{# } }}
+    </script>
+    {% endraw %} {# 是否必须确认显示模板 #} {% raw %}
+    <script type="text/html" id="notice-required">
+      {{# if(d.is_required){ }}
+      <span class="layui-badge layui-bg-green">是</span>
+      {{# } else { }}
+      <span class="layui-badge layui-bg-gray">否</span>
+      {{# } }}
+    </script>
+    {% endraw %}
 
-{# 类型显示模板 #}
-{% raw %}
-<script type="text/html" id="notice-type">
-    {{# if(d.notice_type == 'general'){ }}
-        <span class="layui-badge layui-bg-cyan">通用须知</span>
-    {{# } else if(d.notice_type == 'privacy'){ }}
-        <span class="layui-badge layui-bg-orange">隐私政策</span>
-    {{# } else if(d.notice_type == 'terms'){ }}
-        <span class="layui-badge layui-bg-blue">服务条款</span>
-    {{# } else if(d.notice_type == 'safety'){ }}
-        <span class="layui-badge layui-bg-red">安全须知</span>
-    {{# } else if(d.notice_type == 'system'){ }}
-        <span class="layui-badge layui-bg-purple">系统须知</span>
-    {{# } }}
-</script>
-{% endraw %}
+    <script>
+      layui.use(["table", "form", "layer"], function () {
+        let table = layui.table;
+        let form = layui.form;
+        let layer = layui.layer;
+        var $ = layui.jquery;
 
-{# 是否必须确认显示模板 #}
-{% raw %}
-<script type="text/html" id="notice-required">
-    {{# if(d.is_required){ }}
-        <span class="layui-badge layui-bg-green">是</span>
-    {{# } else { }}
-        <span class="layui-badge layui-bg-gray">否</span>
-    {{# } }}
-</script>
-{% endraw %}
+        // 初始化表格
+        let cols = [
+          [
+            { type: "checkbox", fixed: "left" },
+            { field: "id", title: "ID", width: 80, sort: true },
+            { field: "title", title: "须知标题", width: 200 },
+            {
+              field: "notice_type",
+              title: "类型",
+              width: 120,
+              templet: "#notice-type",
+            },
+            { field: "version", title: "版本", width: 100 },
+            {
+              field: "status",
+              title: "状态",
+              width: 100,
+              templet: "#notice-status",
+            },
+            // {field: 'is_required', title: '是否必读', width: 120, templet: '#notice-required'},
+            { field: "effective_date", title: "生效日期", width: 160 },
+            { field: "create_at", title: "创建时间", width: 160 },
+            {
+              title: "操作",
+              toolbar: "#notice-bar",
+              width: 240,
+              fixed: "right",
+            },
+          ],
+        ];
 
-<script>
-layui.use(['table', 'form', 'layer'], function () {
-    let table = layui.table;
-    let form = layui.form;
-    let layer = layui.layer;
-    var $ = layui.jquery;
-
-    // 初始化表格
-    let cols = [
-        [
-            {type: 'checkbox', fixed: 'left'},
-            {field: 'id', title: 'ID', width: 80, sort: true},
-            {field: 'title', title: '须知标题', width: 200},
-            {field: 'notice_type', title: '类型', width: 120, templet: '#notice-type'},
-            {field: 'version', title: '版本', width: 100},
-            {field: 'status', title: '状态', width: 100, templet: '#notice-status'},
-            {field: 'is_required', title: '必须确认', width: 120, templet: '#notice-required'},
-            {field: 'effective_date', title: '生效日期', width: 160},
-            {field: 'create_at', title: '创建时间', width: 160},
-            {title: '操作', toolbar: '#notice-bar', width: 240, fixed: 'right'}
-        ]
-    ];
-
-    table.render({
-        elem: '#notice-table',
-        url: '{{ url_for("system.notice.data") }}',
-        toolbar: '#notice-toolbar',
-        defaultToolbar: ['filter', 'exports', 'print'],
-        cols: cols,
-        page: true,
-        parseData: function (res) {
+        table.render({
+          elem: "#notice-table",
+          url: '{{ url_for("system.notice.data") }}',
+          toolbar: "#notice-toolbar",
+          defaultToolbar: ["filter", "exports", "print"],
+          cols: cols,
+          page: true,
+          parseData: function (res) {
             return {
-                "code": res.code,
-                "msg": res.msg,
-                "count": res.count,
-                "data": res.data
+              code: res.code,
+              msg: res.msg,
+              count: res.count,
+              data: res.data,
             };
-        },
-        request: {
-            pageName: 'page',
-            limitName: 'limit'
-        }
-    });
+          },
+          request: {
+            pageName: "page",
+            limitName: "limit",
+          },
+        });
 
-    // 工具栏事件
-    table.on('toolbar(notice-table)', function (obj) {
-        if (obj.event === 'add') {
+        // 工具栏事件
+        table.on("toolbar(notice-table)", function (obj) {
+          if (obj.event === "add") {
             layer.open({
-                type: 2,
-                title: '新增须知',
-                shade: 0.1,
-                area: ['90%', '90%'],
-                content: '{{ url_for("system.notice.add") }}'
+              type: 2,
+              title: "新增须知",
+              shade: 0.1,
+              area: ["90%", "90%"],
+              content: '{{ url_for("system.notice.add") }}',
             });
-        } else if (obj.event === 'refresh') {
-            table.reload('notice-table');
-        }
-    });
+          } else if (obj.event === "refresh") {
+            table.reload("notice-table");
+          }
+        });
 
-    // 行工具事件
-    table.on('tool(notice-table)', function (obj) {
-        let data = obj.data;
-        if (obj.event === 'edit') {
+        // 行工具事件
+        table.on("tool(notice-table)", function (obj) {
+          let data = obj.data;
+          if (obj.event === "edit") {
             layer.open({
-                type: 2,
-                title: '编辑须知',
-                shade: 0.1,
-                area: ['90%', '90%'],
-                content: '/system/notice/edit/' + data.id
+              type: 2,
+              title: "编辑须知",
+              shade: 0.1,
+              area: ["90%", "90%"],
+              content: "/system/notice/edit/" + data.id,
             });
-        } else if (obj.event === 'remove') {
-            layer.confirm('确定要删除这条须知吗？', {icon: 3, title: '提示'}, function (index) {
+          } else if (obj.event === "remove") {
+            layer.confirm(
+              "确定要删除这条须知吗？",
+              { icon: 3, title: "提示" },
+              function (index) {
                 $.ajax({
-                    url: '{{ url_for("system.notice.remove") }}',
-                    data: JSON.stringify({id: data.id}),
-                    dataType: 'json',
-                    contentType: 'application/json',
-                    type: 'post',
-                    success: function (result) {
-                        if (result.code === 200) {
-                            layer.msg(result.msg, {icon: 1, time: 1000}, function () {
-                                table.reload('notice-table');
-                            });
-                        } else {
-                            layer.msg(result.msg, {icon: 2, time: 1000});
-                        }
-                    }
+                  url: '{{ url_for("system.notice.remove") }}',
+                  data: JSON.stringify({ id: data.id }),
+                  dataType: "json",
+                  contentType: "application/json",
+                  type: "post",
+                  success: function (result) {
+                    layer.msg(result.msg, { icon: 2, time: 1000 });
+                    table.reload("notice-table");
+                  },
                 });
                 layer.close(index);
-            });
-        } else if (obj.event === 'preview') {
+              }
+            );
+          } else if (obj.event === "preview") {
             // 打开预览页面
-            window.open('/h5/notice/' + data.id, '_blank');
-        } else if (obj.event === 'confirm-records') {
+            window.open("/h5/notice/" + data.id, "_blank");
+          } else if (obj.event === "confirm-records") {
             // 在框架内打开确认记录页面，并传递须知ID作为查询条件
             parent.layui.tab.addTabOnlyByElem("content", {
-                id: 'confirm-records-' + data.id,
-                title: '确认记录 - ' + data.title,
-                url: '/system/notice/confirm/main?notice_id=' + data.id,
-                close: true
+              id: "confirm-records-" + data.id,
+              title: "确认记录 - " + data.title,
+              url: "/system/notice/confirm/main?notice_id=" + data.id,
+              close: true,
             });
-        } else if (obj.event === 'share') {
+          } else if (obj.event === "share") {
             // 分享须知
-            let shareUrl = window.location.origin + '/h5/notice/' + data.id;
+            let shareUrl = window.location.origin + "/h5/notice/" + data.id;
             let shareContent = `
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 15px;">分享须知：${data.title}</h3>
@@ -294,97 +297,113 @@ layui.use(['table', 'form', 'layer'], function () {
                     </div>
                 </div>
             `;
-            
+
             layer.open({
-                type: 1,
-                title: '分享须知',
-                area: ['500px', '450px'],
-                content: shareContent,
-                success: function(layero, index) {
-                    // 生成二维码 - 优先使用本地API
-                    generateQRCode(shareUrl, 'qrcode');
-                    
-                    // 复制链接功能
-                    document.getElementById('copyUrlBtn').onclick = function() {
-                        let urlInput = document.getElementById('shareUrl');
-                        urlInput.select();
-                        urlInput.setSelectionRange(0, 99999); // 移动端兼容
-                        
-                        try {
-                            document.execCommand('copy');
-                            layer.msg('链接已复制到剪贴板', {icon: 1, time: 1500});
-                        } catch (err) {
-                            // 如果复制失败，尝试使用现代API
-                            if (navigator.clipboard) {
-                                navigator.clipboard.writeText(shareUrl).then(function() {
-                                    layer.msg('链接已复制到剪贴板', {icon: 1, time: 1500});
-                                }).catch(function() {
-                                    layer.msg('复制失败，请手动复制链接', {icon: 2, time: 2000});
-                                });
-                            } else {
-                                layer.msg('复制失败，请手动复制链接', {icon: 2, time: 2000});
-                            }
-                        }
-                    };
-                }
+              type: 1,
+              title: "分享须知",
+              area: ["500px", "450px"],
+              content: shareContent,
+              success: function (layero, index) {
+                // 生成二维码 - 优先使用本地API
+                generateQRCode(shareUrl, "qrcode");
+
+                // 复制链接功能
+                document.getElementById("copyUrlBtn").onclick = function () {
+                  let urlInput = document.getElementById("shareUrl");
+                  urlInput.select();
+                  urlInput.setSelectionRange(0, 99999); // 移动端兼容
+
+                  try {
+                    document.execCommand("copy");
+                    layer.msg("链接已复制到剪贴板", { icon: 1, time: 1500 });
+                  } catch (err) {
+                    // 如果复制失败，尝试使用现代API
+                    if (navigator.clipboard) {
+                      navigator.clipboard
+                        .writeText(shareUrl)
+                        .then(function () {
+                          layer.msg("链接已复制到剪贴板", {
+                            icon: 1,
+                            time: 1500,
+                          });
+                        })
+                        .catch(function () {
+                          layer.msg("复制失败，请手动复制链接", {
+                            icon: 2,
+                            time: 2000,
+                          });
+                        });
+                    } else {
+                      layer.msg("复制失败，请手动复制链接", {
+                        icon: 2,
+                        time: 2000,
+                      });
+                    }
+                  }
+                };
+              },
             });
-        }
-    });
+          }
+        });
 
-    // 搜索表单提交
-    form.on('submit(notice-query)', function (data) {
-        table.reload('notice-table', {
+        // 搜索表单提交
+        form.on("submit(notice-query)", function (data) {
+          table.reload("notice-table", {
             where: data.field,
-            page: {curr: 1}
+            page: { curr: 1 },
+          });
+          return false;
         });
-        return false;
-    });
 
-    // 二维码生成函数
-    window.generateQRCode = function(url, containerId) {
-        // 优先使用前端QRCode库
-        if (typeof QRCode !== 'undefined') {
+        // 二维码生成函数
+        window.generateQRCode = function (url, containerId) {
+          // 优先使用前端QRCode库
+          if (typeof QRCode !== "undefined") {
             try {
-                new QRCode(document.getElementById(containerId), {
-                    text: url,
-                    width: 150,
-                    height: 150,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff"
-                });
-                return;
+              new QRCode(document.getElementById(containerId), {
+                text: url,
+                width: 150,
+                height: 150,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+              });
+              return;
             } catch (e) {
-                console.warn('前端QRCode库生成失败，尝试使用后端API:', e);
+              console.warn("前端QRCode库生成失败，尝试使用后端API:", e);
             }
-        }
-        
-        // 使用后端API生成二维码
-        $.ajax({
-            url: '/api/qrcode/generate',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({url: url}),
-            success: function(result) {
-                if (result.success && result.data && result.data.qrcode) {
-                    document.getElementById(containerId).innerHTML = 
-                        '<img src="' + result.data.qrcode + '" alt="二维码" style="border: 1px solid #ddd; width: 150px; height: 150px;">';
-                } else {
-                    // 最后的fallback：使用第三方API
-                    document.getElementById(containerId).innerHTML = 
-                        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + 
-                        encodeURIComponent(url) + '" alt="二维码" style="border: 1px solid #ddd;">';
-                }
-            },
-            error: function() {
-                console.warn('后端二维码API调用失败，使用第三方API');
+          }
+
+          // 使用后端API生成二维码
+          $.ajax({
+            url: "/api/qrcode/generate",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ url: url }),
+            success: function (result) {
+              if (result.success && result.data && result.data.qrcode) {
+                document.getElementById(containerId).innerHTML =
+                  '<img src="' +
+                  result.data.qrcode +
+                  '" alt="二维码" style="border: 1px solid #ddd; width: 150px; height: 150px;">';
+              } else {
                 // 最后的fallback：使用第三方API
-                document.getElementById(containerId).innerHTML = 
-                    '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + 
-                    encodeURIComponent(url) + '" alt="二维码" style="border: 1px solid #ddd;">';
-            }
-        });
-    }
-});
-</script>
-</body>
+                document.getElementById(containerId).innerHTML =
+                  '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' +
+                  encodeURIComponent(url) +
+                  '" alt="二维码" style="border: 1px solid #ddd;">';
+              }
+            },
+            error: function () {
+              console.warn("后端二维码API调用失败，使用第三方API");
+              // 最后的fallback：使用第三方API
+              document.getElementById(containerId).innerHTML =
+                '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' +
+                encodeURIComponent(url) +
+                '" alt="二维码" style="border: 1px solid #ddd;">';
+            },
+          });
+        };
+      });
+    </script>
+  </body>
 </html>

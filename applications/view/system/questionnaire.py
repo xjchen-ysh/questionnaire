@@ -15,6 +15,7 @@ from applications.schemas import (
     QuestionOutSchema,
     QuestionOptionOutSchema,
 )
+from plugins.realip import get_user_ip
 
 bp = Blueprint("questionnaire", __name__, url_prefix="/questionnaire")
 
@@ -697,7 +698,7 @@ def submit_questionnaire(questionnaire_id):
             name=name if name else None,  # 保存姓名，如果为空则设为None
             status=1,  # 已完成
             submit_time=current_time,
-            ip_address=request.remote_addr
+            ip_address=get_user_ip(request)
         )
         
         db.session.add(response)
