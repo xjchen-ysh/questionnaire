@@ -290,6 +290,138 @@ def question_edit(question_id):
     return render_template("system/questionnaire/question_edit.html", question=question)
 
 
+@bp.get("/question/toggle_rule/<int:question_id>")
+def question_toggle_rule(question_id):
+    """设置问题显示规则页面（通过路由渲染模板）"""
+    # 获取当前问题，用于排除自身并限定同问卷范围
+    question = curd.get_one_by_id(Question, question_id)
+
+    # 构建同问卷的单选题列表，如果问题不存在则回退到全局单选题（最多50条）
+    if question:
+        base_query = Question.query.filter_by(
+            questionnaire_id=question.questionnaire_id, question_type="single_choice"
+        ).order_by(Question.sort_order)
+
+    single_choice_questions = []
+    for q in base_query.all():
+        if question and q.id == question_id:
+            # 跳过当前问题自身
+            continue
+        # 获取选项列表并计算字母编码（A、B、C...）
+        opts = q.options.order_by(QuestionOption.sort_order).all()
+        prepared_opts = []
+        for idx, opt in enumerate(opts):
+            prepared_opts.append(
+                {
+                    "id": opt.id,
+                    "option_text": getattr(opt, "option_text", ""),
+                    "code": chr(65 + idx),
+                }
+            )
+        single_choice_questions.append(
+            {"id": q.id, "title": q.title, "options": prepared_opts}
+        )
+
+    # 回显：优先从 show_rules 表读取已保存的显示规则，兼容旧的 Question.config
+    saved_rule = ""
+    if question:
+        from applications.models.questionnaire import ShowRules
+        rule = ShowRules.query.filter_by(question_id=question.id).first()
+        if rule and rule.trigger_question_id and rule.trigger_option_ids:
+            try:
+                opt_id = rule.trigger_option_ids[0] if isinstance(rule.trigger_option_ids, list) else None
+                if opt_id:
+                    saved_rule = f"{rule.trigger_question_id}:{int(opt_id)}"
+            except Exception:
+                saved_rule = ""
+        # 兼容：如果表中无记录，回退读取 config
+        if not saved_rule and question.config:
+            show_rule_cfg = question.config.get("show_rule")
+            if isinstance(show_rule_cfg, dict):
+                saved_rule = show_rule_cfg.get("value") or ""
+                if not saved_rule:
+                    tqid = show_rule_cfg.get("trigger_question_id")
+                    top_ids = show_rule_cfg.get("trigger_option_ids") or []
+                    if tqid and top_ids:
+                        saved_rule = f"{tqid}:{top_ids[0]}"
+            elif isinstance(show_rule_cfg, str):
+                saved_rule = show_rule_cfg
+
+    return render_template(
+        "system/questionnaire/question_toggle_rule.html",
+        single_choice_questions=single_choice_questions,
+        saved_rule=saved_rule,
+    )
+
+
+@bp.post("/question/show_rule/<int:question_id>")
+@authorize("system:questionnaire:edit", log=True)
+def question_show_rule_save(question_id):
+    """保存问题显示规则
+    请求体: { "show_rule": "<trigger_question_id>:<option_id>" } 或 ""
+    保存位置: show_rules 表（按 question_id 记录受控问题的显示规则）
+    """
+    data = request.get_json(force=True) or {}
+    value = (data.get("show_rule") or "").strip()
+
+    # 校验问题
+    question = Question.query.get(question_id)
+    if not question:
+        return fail_api(msg="问题不存在")
+
+    # 空值表示始终显示，清空规则
+    if value == "":
+        from applications.models.questionnaire import ShowRules
+        ShowRules.query.filter_by(question_id=question.id).delete()
+        db.session.commit()
+        return success_api(msg="显示规则已清空")
+
+    # 解析并校验格式: qid:optid
+    try:
+        parts = value.split(":")
+        if len(parts) != 2:
+            return fail_api(msg="规则格式错误")
+        trigger_qid = int(parts[0])
+        trigger_opt_id = int(parts[1])
+    except Exception:
+        return fail_api(msg="规则解析失败")
+
+    # 校验触发问题
+    trigger_q = Question.query.get(trigger_qid)
+    if not trigger_q:
+        return fail_api(msg="触发问题不存在")
+    if trigger_q.questionnaire_id != question.questionnaire_id:
+        return fail_api(msg="触发问题不在同一问卷")
+    if trigger_q.id == question.id:
+        return fail_api(msg="不可选择当前问题自身")
+    if trigger_q.question_type != "single_choice":
+        return fail_api(msg="仅支持单选题作为触发条件")
+
+    # 校验选项隶属
+    opt = QuestionOption.query.filter_by(id=trigger_opt_id, question_id=trigger_q.id).first()
+    if not opt:
+        return fail_api(msg="选项不存在或不属于触发问题")
+
+    # 保存到 show_rules 表（存在则更新，不存在则新增）
+    from applications.models.questionnaire import ShowRules
+    rule = ShowRules.query.filter_by(question_id=question.id).first()
+    if rule:
+        rule.trigger_question_id = trigger_q.id
+        rule.trigger_option_ids = [opt.id]
+        rule.show = True
+    else:
+        rule = ShowRules(
+            question_id=question.id,
+            trigger_question_id=trigger_q.id,
+            trigger_option_ids=[opt.id],
+            show=True,
+        )
+        db.session.add(rule)
+
+    db.session.commit()
+    return success_api(msg="显示规则已保存")
+
+
 @bp.post("/question/save")
 @authorize("system:questionnaire:edit", log=True)
 def question_save():
@@ -367,7 +499,7 @@ def question_update():
 
     # 设置问题配置
     config = None
-    if question_type == "rating":
+    if question_type == "rating" and not options:
         # 评分题默认配置
         config = {"max_rating": 5, "min_rating": 1}
 
@@ -383,7 +515,7 @@ def question_update():
     QuestionOption.query.filter_by(question_id=question_id).delete()
 
     # 如果是选择题，添加新选项
-    if question_type in ["single_choice", "multiple_choice"] and options:
+    if question_type in ["single_choice", "multiple_choice", "rating"] and options:
         for i, option_data in enumerate(options):
             option = QuestionOption(
                 question_id=question_id,
@@ -586,10 +718,26 @@ def preview(questionnaire_id):
         .all()
     )
 
+    # 读取每个问题的显示规则（从 show_rules 表），按问题ID组织映射
+    from applications.models.questionnaire import ShowRules
+    rules_map = {}
+    for q in questions:
+        rules = ShowRules.query.filter_by(question_id=q.id).all()
+        if rules:
+            rules_map[q.id] = [
+                {
+                    "trigger_question_id": r.trigger_question_id,
+                    "trigger_option_ids": (r.trigger_option_ids or []),
+                    "show": bool(r.show),
+                }
+                for r in rules
+            ]
+
     return render_template(
         "system/questionnaire/preview.html",
         questionnaire=questionnaire,
         questions=questions,
+        rules_map=rules_map,
     )
 
 
@@ -627,10 +775,26 @@ def fill(questionnaire_id):
         .all()
     )
 
+    # 读取每个问题的显示规则（从 show_rules 表），按问题ID组织映射
+    from applications.models.questionnaire import ShowRules
+    rules_map = {}
+    for q in questions:
+        rules = ShowRules.query.filter_by(question_id=q.id).all()
+        if rules:
+            rules_map[q.id] = [
+                {
+                    "trigger_question_id": r.trigger_question_id,
+                    "trigger_option_ids": (r.trigger_option_ids or []),
+                    "show": bool(r.show),
+                }
+                for r in rules
+            ]
+
     return render_template(
         "system/questionnaire/fill.html",
         questionnaire=questionnaire,
         questions=questions,
+        rules_map=rules_map,
     )
 
 
@@ -726,6 +890,17 @@ def submit_questionnaire(questionnaire_id):
                     answer.answer_text = answer_data['text']
                 if 'custom_inputs' in answer_data:
                     answer.option_custom_inputs = answer_data['custom_inputs']
+                # 评分值（如果以字典形式提交）
+                if 'value' in answer_data:
+                    answer.answer_value = str(answer_data['value'])
+                # 照片路径列表
+                if 'photo_paths' in answer_data:
+                    try:
+                        paths = answer_data['photo_paths']
+                        if isinstance(paths, list):
+                            answer.set_photo_paths(paths)
+                    except Exception:
+                        pass
             elif isinstance(answer_data, list):
                 # 多选题答案
                 answer.set_option_ids(answer_data)

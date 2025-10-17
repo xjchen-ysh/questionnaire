@@ -90,6 +90,7 @@
                     >
                   </div>
                   <div class="question-actions">
+                    <n-button size="small" @click="editQuestionToggle(question.id)">显示设置</n-button>
                     <n-button size="small" @click="editQuestion(question.id)">
                       <template #icon>
                         <n-icon>
@@ -141,7 +142,7 @@
                     >
                       <n-space align="center">
                         <span>[[ String.fromCharCode(65 + optIndex) ]].</span>
-                        <span>[[ option.option_text ]]</span>
+                        <span>[[ option.text ]]</span>
                         <n-tag
                           v-if="option.is_correct"
                           type="success"
@@ -264,6 +265,49 @@
                 `/system/questionnaire/question/add/${questionnaire.value.id}`,
                 "_blank"
               );
+            }
+          };
+
+          // 问题显示设置
+          // 在弹窗中设置该问题的显示规则，规则只能从同个问卷下的单选题选项中选择，比如问题1的A选项，或者问题2的B选项，不能选到自己
+          const editQuestionToggle = (questionId) => {
+            // 使用 iframe 页面作为弹窗内容，提取到独立页面
+            if (window.parent && window.parent.layer) {
+              window.parent.layer.open({
+                type: 2,
+                title: '设置显示规则',
+                area: ['520px', '320px'],
+                btn: ['确定', '取消'],
+                // 通过静态页面承载弹窗内容，避免内联字符串模板
+                content: `/system/questionnaire/question/toggle_rule/${questionId}`,
+                yes: function(index, layero){
+                  // 从子页面获取当前选择的规则值
+                  const iframeEl = layero.find('iframe')[0];
+                  const selectedRule = iframeEl && iframeEl.contentWindow && iframeEl.contentWindow.getSelectedRule ? iframeEl.contentWindow.getSelectedRule() : '';
+                  // 调用后端接口保存规则
+                  fetch(`/system/questionnaire/question/show_rule/${questionId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ show_rule: selectedRule })
+                  })
+                  .then(res => res.json())
+                  .then(res => {
+                    if (res.success) {
+                      window.parent.layer.close(index);
+                      // 更新本地数据
+                      const question = questions.value.find(q => q.id === questionId);
+                      if (question) {
+                        question.show_rule = selectedRule;
+                      }
+                      window.parent.layer.msg('显示规则已保存', {icon: 1});
+                    } else {
+                      window.parent.layer.msg(res.msg || '保存失败', {icon: 2});
+                    }
+                  });
+                }
+              });
+            } else {
+              alert('缺少 layer 弹窗依赖');
             }
           };
 
@@ -449,6 +493,7 @@
             getQuestionTypeColor,
             addQuestion,
             editQuestion,
+            editQuestionToggle,
             deleteQuestion,
             previewQuestionnaire,
             saveDesign,

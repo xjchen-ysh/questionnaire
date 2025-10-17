@@ -14,7 +14,10 @@
     <!-- Naive UI -->
     <script src="{{ url_for('static', filename='index/js/naiveui.js') }}"></script>
     <!-- 引入外部CSS文件 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='system/questionnaire/css/question_edit.css') }}" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='system/questionnaire/css/question_edit.css') }}"
+    />
   </head>
 
   <body>
@@ -118,62 +121,109 @@
                         depth="3"
                         style="margin-left: 12px; font-size: 12px"
                       >
-                        勾选"正确"可设置该选项为正确答案
+                        [[ formData.questionType === "rating" ?
+                        "默认1-5分，可自定义选项" :
+                        '勾选"正确"可设置该选项为正确答案' ]]
                       </n-text>
                     </div>
 
-                    <div
-                      v-for="(option, index) in formData.options"
-                      :key="option.id"
-                      class="option-item"
-                    >
-                      <div class="option-label">选项[[ index + 1 ]]</div>
-                      <div style="flex: 1">
-                        <n-input
-                          v-model:value="option.text"
-                          placeholder="选项文本"
-                          size="small"
-                        />
+                    <template v-if="formData.questionType === 'rating'">
+                      <div
+                        v-for="(option, index) in formData.options"
+                        :key="option.id"
+                        class="option-item"
+                      >
+                        <div class="option-label">选项[[ index + 1 ]]</div>
+                        <div style="flex: 1">
+                          <n-input
+                            v-model:value="option.text"
+                            placeholder="选项文本"
+                            size="small"
+                          />
+                        </div>
+                        <div style="width: 120px">
+                          <n-input
+                            v-model:value="option.value"
+                            type="number"
+                            placeholder="选项分值"
+                            size="small"
+                          />
+                        </div>
+                        <div class="option-controls">
+                          <n-button
+                            type="error"
+                            size="small"
+                            @click="removeOption(index)"
+                            :disabled="formData.options.length <= 1"
+                          >
+                            <template #icon>
+                              <n-icon>
+                                <svg viewBox="0 0 24 24">
+                                  <path
+                                    fill="currentColor"
+                                    d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                                  />
+                                </svg>
+                              </n-icon>
+                            </template>
+                          </n-button>
+                        </div>
                       </div>
-                      <div style="width: 120px">
-                        <n-input
-                          v-model:value="option.value"
-                          placeholder="选项值"
-                          size="small"
-                        />
+                    </template>
+                    <template v-else>
+                      <div
+                        v-for="(option, index) in formData.options"
+                        :key="option.id"
+                        class="option-item"
+                      >
+                        <div class="option-label">选项[[ index + 1 ]]</div>
+                        <div style="flex: 1">
+                          <n-input
+                            v-model:value="option.text"
+                            placeholder="选项文本"
+                            size="small"
+                          />
+                        </div>
+                        <div style="width: 120px">
+                          <n-input
+                            v-model:value="option.value"
+                            placeholder="选项值"
+                            size="small"
+                          />
+                        </div>
+                        <div class="option-controls">
+                          <n-checkbox
+                            v-model:checked="option.isCorrect"
+                            size="small"
+                          >
+                            正确
+                          </n-checkbox>
+                          <n-checkbox
+                            v-model:checked="option.allowInput"
+                            size="small"
+                          >
+                            允许输入
+                          </n-checkbox>
+                          <n-button
+                            type="error"
+                            size="small"
+                            @click="removeOption(index)"
+                            :disabled="formData.options.length <= 1"
+                          >
+                            <template #icon>
+                              <n-icon>
+                                <svg viewBox="0 0 24 24">
+                                  <path
+                                    fill="currentColor"
+                                    d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                                  />
+                                </svg>
+                              </n-icon>
+                            </template>
+                          </n-button>
+                        </div>
                       </div>
-                      <div class="option-controls">
-                        <n-checkbox
-                          v-model:checked="option.isCorrect"
-                          size="small"
-                        >
-                          正确
-                        </n-checkbox>
-                        <n-checkbox
-                          v-model:checked="option.allowInput"
-                          size="small"
-                        >
-                          允许输入
-                        </n-checkbox>
-                        <n-button
-                          type="error"
-                          size="small"
-                          @click="removeOption(index)"
-                          :disabled="formData.options.length <= 1"
-                        >
-                          <template #icon>
-                            <n-icon>
-                              <svg viewBox="0 0 24 24">
-                                <path
-                                  fill="currentColor"
-                                  d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                                />
-                              </svg>
-                            </n-icon>
-                          </template>
-                        </n-button>
-                      </div>
-                    </div>
+                    </template>
                   </div>
                 </n-form-item>
               </div>

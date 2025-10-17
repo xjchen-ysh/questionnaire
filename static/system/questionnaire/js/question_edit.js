@@ -82,7 +82,8 @@ const app = createApp({
     const showOptions = computed(() => {
       return (
         formData.questionType === "single_choice" ||
-        formData.questionType === "multiple_choice"
+        formData.questionType === "multiple_choice" ||
+        formData.questionType === "rating"
       );
     });
 

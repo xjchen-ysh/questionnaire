@@ -79,6 +79,23 @@ class Questionnaire(db.Model):
         return True
 
 
+class ShowRules(db.Model):
+    """显示规则模型"""
+    __tablename__ = 'show_rules'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='显示规则ID')
+    # 被控制的问题ID（哪个问题的显示受控制）
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False, comment='被控制的问题ID')
+    trigger_question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False, comment='触发问题ID')
+    trigger_option_ids = db.Column(db.JSON, comment='触发选项ID(JSON格式,存储选项ID列表)')
+    show = db.Column(db.Boolean, default=True, comment='是否显示')
+    create_at = db.Column(db.DateTime, default=datetime.datetime.now, comment='创建时间')
+    update_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now, comment='更新时间')
+    
+    def __repr__(self):
+        return f'<ShowRules {self.id}>'
+
+
 class Question(db.Model):
     """问题模型"""
     __tablename__ = 'question'
@@ -97,6 +114,8 @@ class Question(db.Model):
     # 关联关系
     options = db.relationship('QuestionOption', backref='question', lazy='dynamic', cascade='all, delete-orphan')
     answers = db.relationship('QuestionAnswer', backref='question', lazy='dynamic')
+    # 该问题的显示规则集合，按 ShowRules.question_id 进行关联
+    rules = db.relationship('ShowRules', backref='question', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='ShowRules.question_id')
     
     def __repr__(self):
         return f'<Question {self.title}>'
@@ -117,7 +136,9 @@ class Question(db.Model):
     @property
     def has_options(self):
         """是否有选项"""
-        return self.question_type in ['single_choice', 'multiple_choice']
+        print(self.question_type)
+        print(self.options)
+        return self.question_type in ['single_choice', 'multiple_choice'] or self.options.count() > 0
     
     def get_options_list(self):
         """获取选项列表"""

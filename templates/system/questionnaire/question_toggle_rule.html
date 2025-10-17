@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>设置显示规则</title>
+  <!-- Vue.js 3 & Naive UI -->
+  <script src="{{ url_for('static', filename='index/js/vue.global.js') }}"></script>
+  <script src="{{ url_for('static', filename='index/js/naiveui.js') }}"></script>
+  <style>
+    :root { --bg: #ffffff; --border: #e5e7eb; --text: #111827; --muted: #6b7280; --accent: #3b82f6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Microsoft Yahei", sans-serif; }
+    .container { padding: 18px 16px; }
+    .title { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+    .footer-hint { margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .empty-hint { margin-top: 8px; font-size: 12px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <p class="title">请选择当以下选项被选中时才显示本题：</p>
+      <n-select v-model:value="selectedRule" :options="selectOptions" clearable filterable placeholder="始终显示" style="width: 100%;" />
+      <p v-if="noOptions" class="empty-hint">当前问卷暂无可用的单选题选项。</p>
+      <p class="footer-hint">仅可选择同问卷中的单选题选项，且不可选择当前题目。</p>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+    const app = createApp({
+      setup(){
+        const savedRule = "{{ saved_rule|default('') }}";
+        const rawQuestions = {{ single_choice_questions|default([])|tojson }};
+        const selectedRule = ref(savedRule);
+        const selectOptions = ref([]);
+
+        const noOptions = computed(() => {
+          return rawQuestions.length === 0 || selectOptions.value.filter(opt => opt.type === 'group').length === 0;
+        });
+
+        const buildOptions = () => {
+          const opts = [];
+          // 默认项：始终显示
+          opts.push({ label: '始终显示', value: '' });
+          rawQuestions.forEach(q => {
+            if (!q.options || q.options.length === 0) return;
+            const children = q.options.map(opt => ({
+              label: `问题「${q.title}」的选项 ${opt.code}：${opt.option_text}`,
+              value: `${q.id}:${opt.id}`
+            }));
+            opts.push({ label: `问题 ${q.title}`, type: 'group', children });
+          });
+          selectOptions.value = opts;
+        };
+
+        onMounted(() => {
+          buildOptions();
+        });
+
+        // 暴露给父页面读取选择结果
+        window.getSelectedRule = () => selectedRule.value || '';
+
+        return { selectedRule, selectOptions, noOptions };
+      }
+    });
+    app.use(naive);
+    app.mount('#app');
+  </script>
+</body>
+</html>

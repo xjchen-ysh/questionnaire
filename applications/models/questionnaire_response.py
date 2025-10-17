@@ -1,4 +1,5 @@
 import datetime
+import json
 from applications.extensions import db
 
 
@@ -101,6 +102,7 @@ class QuestionAnswer(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='答案ID')
     response_id = db.Column(db.Integer, db.ForeignKey('questionnaire_response.id'), nullable=False, comment='回答ID')
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False, comment='问题ID')
+    photo_paths = db.Column(db.Text, comment='照片路径列表(JSON格式存储多张图片路径)')
     answer_text = db.Column(db.Text, comment='文本答案')
     answer_option_ids = db.Column(db.String(500), comment='选项ID列表(逗号分隔)')
     answer_value = db.Column(db.String(100), comment='答案值(评分等)')
@@ -109,6 +111,23 @@ class QuestionAnswer(db.Model):
     
     def __repr__(self):
         return f'<QuestionAnswer {self.id}>'
+
+    @property
+    def photo_paths_list(self):
+        """获取照片路径列表"""
+        if not self.photo_paths:
+            return []
+        try:
+            return json.loads(self.photo_paths)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_photo_paths(self, paths_list):
+        """设置照片路径列表"""
+        if not paths_list:
+            self.photo_paths = None
+        else:
+            self.photo_paths = json.dumps(paths_list)
     
     def get_option_ids(self):
         """获取选项ID列表"""

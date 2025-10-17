@@ -256,6 +256,74 @@
         font-size: 14px;
       }
 
+      /* 图片上传区域样式 */
+      .photo-upload {
+        margin-top: 12px;
+        border-top: 1px dashed #e8e8e8;
+        padding-top: 12px;
+      }
+      .photo-upload-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .photo-upload-title {
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+      }
+      .photo-tip {
+        font-size: 12px;
+        color: #999;
+      }
+      .photo-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .photo-item {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border: 1px solid #e8e8e8;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #fafafa;
+      }
+      .photo-thumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .photo-remove {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        font-size: 12px;
+        padding: 2px 4px;
+        cursor: pointer;
+      }
+      .photo-upload-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        border: 1px dashed #c0c0c0;
+        border-radius: 6px;
+        color: #666;
+        cursor: pointer;
+        background: #fff;
+      }
+      .photo-upload-input {
+        display: none;
+      }
+
       .rating-labels {
         display: flex;
         justify-content: space-between;
@@ -585,7 +653,7 @@
           <div class="questionnaire-content">
             <!-- 问题列表 -->
             {% for question in questions %}
-            <div class="question-item">
+            <div class="question-item" v-show="shouldShow({{ question.id }})">
               <div class="question-title">
                 {{ loop.index }}. {{ question.title }} {% if
                 question.is_required %}
@@ -665,24 +733,34 @@
               <!-- 评分题 -->
               {% elif question.question_type == 'rating' %}
               <div class="rating-container">
-                {% set config = question.config or {} %} {% set min_rating =
-                config.get('min_rating', 1) %} {% set max_rating =
-                config.get('max_rating', 5) %}
-                <div class="rating-options">
-                  {% for i in range(min_rating, max_rating + 1) %}
-                  <div
-                    class="rating-item"
-                    :class="{ selected: selectedOptions['{{ question.id }}'] === '{{ i }}' }"
-                    @click="selectOption({{ question.id }}, '{{ i }}', 'single')"
-                  >
-                    <span class="rating-number">{{ i }}</span>
+                {% if question.options.count() > 0 %}
+                  <div class="rating-options">
+                    {% for option in question.options %}
+                    <div
+                      class="rating-item"
+                      :class="{ selected: selectedOptions['{{ question.id }}'] === '{{ option.option_value }}' }"
+                      @click="selectOption({{ question.id }}, '{{ option.option_value }}', 'single')"
+                    >
+                      <span class="rating-number">{{ option.option_value }}</span>
+                    </div>
+                    {% endfor %}
                   </div>
-                  {% endfor %}
-                </div>
-                <div class="rating-labels">
-                  <span class="rating-label-min">{{ min_rating }}分</span>
-                  <span class="rating-label-max">{{ max_rating }}分</span>
-                </div>
+                {% else %}
+                  {% set config = question.config or {} %} {% set min_rating =
+                  config.get('min_rating', 1) %} {% set max_rating =
+                  config.get('max_rating', 5) %}
+                  <div class="rating-options">
+                    {% for i in range(min_rating, max_rating + 1) %}
+                    <div
+                      class="rating-item"
+                      :class="{ selected: selectedOptions['{{ question.id }}'] === '{{ i }}' }"
+                      @click="selectOption({{ question.id }}, '{{ i }}', 'single')"
+                    >
+                      <span class="rating-number">{{ i }}</span>
+                    </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               </div>
 
               <!-- 文本题 -->
@@ -702,6 +780,24 @@
                 placeholder="请输入您的答案..."
               ></textarea>
               {% endif %}
+
+              <!-- 图片上传（可选，所有题型均可附加图片说明） -->
+              <div class="photo-upload">
+                <div class="photo-upload-header">
+                  <div class="photo-upload-title">图片上传（可选）</div>
+                  <div class="photo-tip">支持PNG/JPG/JPEG/GIF，单张≤5MB，最多9张</div>
+                </div>
+                <div class="photo-list">
+                  <div class="photo-item" v-for="(url, idx) in (photoPaths['{{ question.id }}'] || [])" :key="idx">
+                    <img class="photo-thumb" :src="url" alt="已上传图片" />
+                    <button class="photo-remove" @click.prevent="removePhoto('{{ question.id }}', idx)">删除</button>
+                  </div>
+                  <label class="photo-upload-btn">
+                    <input class="photo-upload-input" type="file" accept="image/*" multiple @change="handlePhotoSelect('{{ question.id }}', $event)" />
+                    <span>上传图片</span>
+                  </label>
+                </div>
+              </div>
             </div>
             {% endfor %}
           </div>
@@ -752,6 +848,11 @@
     </div>
     <!-- app结束 -->
 
+    <!-- 显示规则映射（由后端传入） -->
+    <script>
+      window.__showRules__ = {{ rules_map | tojson }};
+    </script>
+
     <script>
       const { createApp, ref, reactive } = Vue;
       const { NMessageProvider, createDiscreteApi } = naive;
@@ -767,6 +868,8 @@
               const selectedOptions = reactive({});
               const customInputs = reactive({});
               const textAnswers = reactive({});
+              const photoPaths = reactive({});
+              const showRules = window.__showRules__ || {};
               const contactInfo = reactive({
                   phone: '',
                   name: ''
@@ -797,6 +900,24 @@
                   return selected && selected.includes(optionId.toString());
               };
 
+              // 判断问题是否显示：
+              // - 未设置规则：直接显示
+              // - 已设置规则：任一规则满足则显示（多条规则 OR）
+              const shouldShow = (questionId) => {
+                  const rules = showRules[questionId];
+                  if (!rules || rules.length === 0) return true;
+                  // 检查是否有任一规则满足
+                  return rules.some(rule => {
+                      if (!rule || !rule.trigger_question_id) return false;
+                      const selected = selectedOptions[rule.trigger_question_id];
+                      if (!selected) return false;
+                      const selectedArr = Array.isArray(selected) ? selected.map(String) : [String(selected)];
+                      const targets = Array.isArray(rule.trigger_option_ids) ? rule.trigger_option_ids.map(String) : [];
+                      const show = (rule.show === undefined) ? true : !!rule.show;
+                      return show && targets.some(id => selectedArr.includes(id));
+                  });
+              };
+
               // 验证手机号
               const validatePhone = (phone) => {
                   const phoneRegex = /^1[3-9]\d{9}$/;
@@ -819,6 +940,10 @@
 
                   for (const question of requiredQuestions) {
                       const questionId = question.id.toString();
+                      // 如果该问题当前隐藏，则跳过必填校验
+                      if (!shouldShow(question.id)) {
+                          continue;
+                      }
                       let hasAnswer = false;
 
                       // 根据问题类型检查是否有答案
@@ -938,10 +1063,39 @@
                           }
                       });
 
+                      // 处理每题图片路径
+                      Object.keys(photoPaths).forEach(questionId => {
+                          const paths = photoPaths[questionId];
+                          if (paths && paths.length > 0) {
+                              const existing = answers[questionId];
+                              if (existing === undefined) {
+                                  answers[questionId] = { photo_paths: paths };
+                              } else if (Array.isArray(existing)) {
+                                  answers[questionId] = { options: existing, photo_paths: paths };
+                              } else if (typeof existing === 'string' && existing.trim() !== '') {
+                                  answers[questionId] = { text: existing.trim(), photo_paths: paths };
+                              } else if (typeof existing === 'number') {
+                                  answers[questionId] = { value: existing, photo_paths: paths };
+                              } else if (existing && typeof existing === 'object') {
+                                  answers[questionId]['photo_paths'] = paths;
+                              } else {
+                                  answers[questionId] = { photo_paths: paths };
+                              }
+                          }
+                      });
+
+                      // 过滤掉未显示的问题答案
+                      const filteredAnswers = {};
+                      for (const qid in answers) {
+                          if (shouldShow(parseInt(qid))) {
+                              filteredAnswers[qid] = answers[qid];
+                          }
+                      }
+
                       const submitData = {
                           phone: contactInfo.phone,
                           name: contactInfo.name,
-                          answers: answers
+                          answers: filteredAnswers
                       };
 
                       const response = await fetch('/system/questionnaire/submit/{{ questionnaire.id }}', {
@@ -980,24 +1134,78 @@
                   Object.keys(textAnswers).forEach(key => {
                       delete textAnswers[key];
                   });
+                  Object.keys(photoPaths).forEach(key => {
+                      delete photoPaths[key];
+                  });
                   contactInfo.phone = '';
                   contactInfo.name = '';
                   submitted.value = false;
                   submitting.value = false;
               };
 
+              // 图片上传功能
+              const MAX_PHOTOS_PER_QUESTION = 9;
+              const handlePhotoSelect = async (questionId, event) => {
+                  try {
+                      const files = Array.from(event.target.files || []);
+                      if (!photoPaths[questionId]) photoPaths[questionId] = [];
+                      const remaining = MAX_PHOTOS_PER_QUESTION - photoPaths[questionId].length;
+                      if (remaining <= 0) {
+                          message.warning(`最多上传${MAX_PHOTOS_PER_QUESTION}张图片`);
+                          event.target.value = '';
+                          return;
+                      }
+                      const toUpload = files.slice(0, remaining);
+                      for (const file of toUpload) {
+                          const url = await uploadPhoto(file);
+                          if (url) {
+                              photoPaths[questionId].push(url);
+                          }
+                      }
+                  } catch (e) {
+                      console.error('图片上传失败', e);
+                      message.error('图片上传失败，请稍后重试');
+                  } finally {
+                      // 清空选择，避免重复触发
+                      if (event && event.target) event.target.value = '';
+                  }
+              };
+
+              const uploadPhoto = async (file) => {
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  const resp = await fetch('/api/upload/photo', { method: 'POST', body: formData });
+                  const res = await resp.json();
+                  if (res && res.success && res.data && res.data.path) {
+                      return res.data.path;
+                  } else {
+                      message.error(res && res.msg ? res.msg : '上传失败');
+                      return null;
+                  }
+              };
+
+              const removePhoto = (questionId, index) => {
+                  if (!photoPaths[questionId]) return;
+                  photoPaths[questionId].splice(index, 1);
+              };
+
               return {
                   selectedOptions,
                   customInputs,
                   textAnswers,
+                  photoPaths,
                   contactInfo,
                   submitting,
                   submitted,
                   selectOption,
                   isOptionSelected,
+                  shouldShow,
                   validateRequiredFields,
                   submitQuestionnaire,
-                  resetForm
+                  resetForm,
+                  handlePhotoSelect,
+                  uploadPhoto,
+                  removePhoto
               };
           }
       }).mount('#app');

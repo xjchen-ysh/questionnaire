@@ -156,7 +156,7 @@
             <!-- 问卷内容 -->
             <div class="questionnaire-content">
                 {% for question in questions %}
-                <div class="question-item">
+                <div class="question-item" v-show="shouldShow({{ question.id }})">
                     <div class="question-title">
                         {{ loop.index }}. {{ question.title }}
                         {% if question.is_required %}
@@ -249,16 +249,29 @@
                     <!-- 评分题 -->
                     {% elif question.question_type == 'rating' %}
                     <div class="rating-options">
-                        {% for i in range(1, 6) %}
-                        <label style="margin-right: 15px; cursor: pointer;">
-                            <input type="radio" 
-                                   name="question_{{ question.id }}" 
-                                   value="{{ i }}"
-                                   v-model="textAnswers['{{ question.id }}']"
-                                   style="margin-right: 5px;">
-                            {{ i }}分
-                        </label>
-                        {% endfor %}
+                        {% if question.options.count() > 0 %}
+                            {% for option in question.options %}
+                            <label style="margin-right: 15px; cursor: pointer;">
+                                <input type="radio" 
+                                    name="question_{{ question.id }}" 
+                                    value="{{ option.id }}"
+                                    v-model="textAnswers['{{ question.id }}']"
+                                    style="margin-right: 5px;">
+                                {{ option.option_text }}
+                            </label>
+                            {% endfor %}
+                        {% else %}
+                            {% for i in range(1, 6) %}
+                            <label style="margin-right: 15px; cursor: pointer;">
+                                <input type="radio" 
+                                    name="question_{{ question.id }}" 
+                                    value="{{ i }}"
+                                    v-model="textAnswers['{{ question.id }}']"
+                                    style="margin-right: 5px;">
+                                {{ i }}分
+                            </label>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -274,6 +287,11 @@
         </div>
     </div>
 
+    <!-- 显示规则映射（由后端传入） -->
+    <script>
+        window.__showRules__ = {{ rules_map | tojson }};
+    </script>
+
     <script>
         const { createApp, ref, reactive } = Vue;
 
@@ -285,6 +303,7 @@
                 const customInputs = reactive({}); // 存储自定义输入内容
                 const textAnswers = reactive({}); // 存储文本类问题的答案
                 const submitting = ref(false);
+                const showRules = window.__showRules__ || {}; // 问题显隐规则映射
 
                 // 处理选项变化
                 const handleOptionChange = (questionId, optionId, type) => {
@@ -307,6 +326,25 @@
                 const isOptionSelected = (questionId, optionId) => {
                     const selected = selectedOptions[questionId];
                     return selected && selected.includes(optionId.toString());
+                };
+
+                // 判断问题是否显示：
+                // - 未设置规则：直接显示
+                // - 已设置规则：任一规则满足则显示（多条规则 OR）
+                const shouldShow = (questionId) => {
+                    const rules = showRules[questionId];
+                    if (!rules || rules.length === 0) return true;
+                    // 检查是否有任一规则满足
+                    return rules.some(rule => {
+                        if (!rule || !rule.trigger_question_id) return false;
+                        const selected = selectedOptions[rule.trigger_question_id];
+                        if (!selected) return false;
+                        const selectedArr = Array.isArray(selected) ? selected.map(String) : [String(selected)];
+                        const targets = Array.isArray(rule.trigger_option_ids) ? rule.trigger_option_ids.map(String) : [];
+                        // 仅当 rule.show 为真时生效（默认为真）
+                        const show = (rule.show === undefined) ? true : !!rule.show;
+                        return show && targets.some(id => selectedArr.includes(id));
+                    });
                 };
 
                 // 提交问卷
@@ -367,6 +405,7 @@
                     submitting,
                     handleOptionChange,
                     isOptionSelected,
+                    shouldShow,
                     submitQuestionnaire
                 };
             }

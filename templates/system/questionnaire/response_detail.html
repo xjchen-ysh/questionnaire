@@ -231,7 +231,11 @@
                                 <div style="margin-bottom: 15px;">
                                     <h5 style="color: #666; margin-bottom: 8px;">评分设置：</h5>
                                     <div style="background-color: #fafafa; padding: 10px; border-radius: 4px; color: #333;">
+                                        {% if question.options.count() > 0 %}
+                                        评分范围：{% for option in question.options %} {{ option.option_value }} 分  {% endfor %}
+                                        {% else %}
                                         评分范围：1 - {{ question.rating_max or 5 }} 分
+                                        {% endif %}
                                         {% if question.rating_labels %}
                                         <br>标签：{{ question.rating_labels }}
                                         {% endif %}
@@ -266,13 +270,15 @@
                                             {% elif question.question_type == 'rating' %}
                                                 {% if answer.answer_value %}
                                                     <div style="font-size: 16px;">
-                                                        {% for i in range(1, (question.config.rating_max or 5) + 1) %}
-                                                            {% if i <= (answer.answer_value | int) %}
-                                                                <span style="color: #FFB800;">★</span>
-                                                            {% else %}
-                                                                <span style="color: #e6e6e6;">☆</span>
-                                                            {% endif %}
-                                                        {% endfor %}
+                                                        {% if question.options.count() == 0 %}
+                                                            {% for i in range(1, (question.config.rating_max or 5) + 1) %}
+                                                                {% if i <= (answer.answer_value | int) %}
+                                                                    <span style="color: #FFB800;">★</span>
+                                                                {% else %}
+                                                                    <span style="color: #e6e6e6;">☆</span>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% endif %}
                                                         <span style="margin-left: 10px; color: #1E9FFF; font-weight: bold;">{{ answer.answer_value }} 分</span>
                                                     </div>
                                                 {% else %}
@@ -297,6 +303,18 @@
                                             <span style="color: #999;">未回答</span>
                                         {% endif %}
                                     </div>
+                                    {% if answer and answer.photo_paths_list %}
+                                    <div style="margin-top: 10px;">
+                                        <h5 style="color: #666; margin-bottom: 8px;">上传图片：</h5>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                            {% for img in answer.photo_paths_list %}
+                                            <a href="{{ img }}" target="_blank" style="display: inline-block; width: 90px; height: 90px; border: 1px solid #e6e6e6; border-radius: 4px; overflow: hidden; background: #fafafa;">
+                                                <img src="{{ img }}" alt="图片" style="width: 100%; height: 100%; object-fit: cover;" />
+                                            </a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
