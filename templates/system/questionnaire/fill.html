@@ -52,15 +52,45 @@
         line-height: 1.4;
       }
 
-      .questionnaire-description {
+.questionnaire-description {
         font-size: 14px;
         opacity: 0.9;
         line-height: 1.5;
+        width: 100%;
+        max-width: 100%;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      /* 限制富文本内元素不超出容器宽度 */
+      .questionnaire-description img,
+      .questionnaire-description video,
+      .questionnaire-description iframe,
+      .questionnaire-description canvas {
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      /* 代码与预格式化文本换行避免横向溢出 */
+      .questionnaire-description pre,
+      .questionnaire-description code {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      /* 表格固定布局并限制宽度 */
+      .questionnaire-description table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
       }
 
       /* 问卷内容 */
-      .questionnaire-content {
+.questionnaire-content {
         padding: 16px;
+        overflow-x: hidden; /* 防止子元素横向溢出页面 */
       }
 
       /* 联系信息表单 */
@@ -643,9 +673,27 @@
           <div class="questionnaire-header">
             <div class="questionnaire-title">{{ questionnaire.title }}</div>
             {% if questionnaire.description %}
-            <div class="questionnaire-description">
-              {{ questionnaire.description }}
-            </div>
+            <!-- 采用JSON安全注入 + JS解码实体后写入，避免显示为标签文本 -->
+            <script type="application/json" id="questionnaire-desc-json">{{ questionnaire.description | tojson | safe }}</script>
+            <div class="questionnaire-description" id="questionnaire-desc"></div>
+            <script>
+              (function(){
+                try {
+                  var node = document.getElementById('questionnaire-desc-json');
+                  var target = document.getElementById('questionnaire-desc');
+                  if (node && target) {
+                    var raw = JSON.parse(node.textContent || '""');
+                    // 解码可能的HTML实体（例如 &lt;h2&gt;）为真实HTML并写入
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(raw || '', 'text/html');
+                    var decoded = doc.documentElement.textContent || raw || '';
+                    target.innerHTML = decoded;
+                  }
+                } catch (e) {
+                  console.warn('render questionnaire description failed', e);
+                }
+              })();
+            </script>
             {% endif %}
           </div>
 
@@ -781,7 +829,10 @@
               ></textarea>
               {% endif %}
 
-              <!-- 图片上传（可选，所有题型均可附加图片说明） -->
+              {% set _cfg = question.config or {} %}
+{% set _allow_upload = _cfg.get('allow_upload', False) %}
+              <!-- 图片上传（按配置显示） -->
+              {% if _allow_upload %}
               <div class="photo-upload">
                 <div class="photo-upload-header">
                   <div class="photo-upload-title">图片上传（可选）</div>
@@ -798,6 +849,7 @@
                   </label>
                 </div>
               </div>
+              {% endif %}
             </div>
             {% endfor %}
           </div>

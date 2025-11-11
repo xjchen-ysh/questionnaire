@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, current_app
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
@@ -88,7 +88,8 @@ def save():
     
     # 验证必填字段
     title = str_escape(req_json.get("title"))
-    content = str_escape(req_json.get("content"))
+    # 方案B：支持富文本，保留HTML
+    content = req_json.get("content")
     if not title or not content:
         return fail_api(msg="标题和内容不能为空")
     
@@ -160,7 +161,8 @@ def update():
     
     # 验证必填字段
     title = str_escape(req_json.get("title"))
-    content = str_escape(req_json.get("content"))
+    # 方案B：支持富文本，保留HTML
+    content = req_json.get("content")
     if not title or not content:
         return fail_api(msg="标题和内容不能为空")
     
@@ -204,6 +206,47 @@ def update():
     db.session.commit()
     
     return success_api(msg="须知更新成功")
+
+
+@bp.post("/upload_image")
+@authorize("system:notice:edit", log=True)
+def upload_image():
+    """wangEditor 图片上传接口，返回 errno/data.url 格式"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"errno": 1, "message": "未选择文件"})
+        file = request.files['file']
+        if not file or file.filename == '':
+            return jsonify({"errno": 1, "message": "未选择文件"})
+
+        # 校验文件类型
+        allowed_ext = {'.png', '.jpg', '.jpeg', '.gif'}
+        _, ext = os.path.splitext(file.filename.lower())
+        if ext not in allowed_ext:
+            return jsonify({"errno": 1, "message": "不支持的文件类型"})
+
+        # 构造保存路径 static/uploads/notice_editor/YYYY/MM/DD/
+        today = datetime.now()
+        upload_dir = os.path.join(
+            current_app.root_path,
+            'static', 'uploads', 'notice_editor',
+            today.strftime('%Y'), today.strftime('%m'), today.strftime('%d')
+        )
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # 生成安全文件名
+        base = os.path.splitext(secure_filename(file.filename))[0]
+        ts = today.strftime('%H%M%S%f')
+        filename = f"{base}_{ts}{ext}"
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+
+        # 相对路径供前端访问
+        relative = f"/static/uploads/notice_editor/{today.strftime('%Y')}/{today.strftime('%m')}/{today.strftime('%d')}/{filename}"
+        return jsonify({"errno": 0, "data": {"url": relative}})
+    except Exception as e:
+        current_app.logger.error(f"notice image upload error: {str(e)}")
+        return jsonify({"errno": 1, "message": "上传失败，请重试"})
 
 
 @bp.post("/remove")

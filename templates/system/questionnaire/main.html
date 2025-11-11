@@ -266,8 +266,8 @@
         let cols = [
             [
                 {title: 'ID', field: 'id', align: 'center', width: 40, fixed: 'left'},
-                {title: '问卷标题', field: 'title', align: 'center', width: 200, fixed: 'left'},
-                {title: '问卷描述', field: 'description', align: 'center', width: 180},
+                {title: '问卷标题', field: 'title', align: 'center', minWidth: 200, fixed: 'left'},
+                {title: '问卷描述', field: 'description', align: 'center', minWidth: 180},
                 {title: '问卷类型', field: 'type_text', align: 'center', width: 100},
                 {title: '状态', field: 'status', align: 'center', templet: '#questionnaire-status', width: 100},
                 {title: '开始时间', field: 'start_time', templet: '#questionnaire-startTime', align: 'center', width: 120},
@@ -276,7 +276,7 @@
                 // {title: '允许匿名', field: 'allow_anonymous', align: 'center', templet: '#questionnaire-anonymous', width: 100},
                 // {title: '需要登录', field: 'require_login', align: 'center', templet: '#questionnaire-login', width: 100},
                 {title: '创建时间', field: 'create_at', templet: '#questionnaire-createTime', align: 'center', width: 120},
-                {title: '操作', toolbar: '#questionnaire-bar', align: 'center', width: 200, fixed: 'right'}
+                {title: '操作', toolbar: '#questionnaire-bar', align: 'center', minWidth: 200, fixed: 'right'}
             ]
         ]
 
@@ -419,7 +419,7 @@
                 type: 2,
                 title: '新增',
                 shade: 0.1,
-                area: ['550px', '550px'],
+                area: ['90%', '90%'],
                 content: MODULE_PATH + 'add'
             })
         }
@@ -429,7 +429,7 @@
                 type: 2,
                 title: '修改',
                 shade: 0.1,
-                area: ['550px', '500px'],
+                area: ['90%', '90%'],
                 content: MODULE_PATH + 'edit/' + obj.data['id']
             })
         }

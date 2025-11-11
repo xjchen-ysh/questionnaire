@@ -3,6 +3,9 @@
 <head>
     <title>问卷管理</title>
     {% include 'system/common/header.html' %}
+    <!-- wangEditor v5 样式与脚本（CDN） -->
+    <link rel="stylesheet" href="https://unpkg.com/@wangeditor/editor@latest/dist/css/style.css">
+    <script src="https://unpkg.com/@wangeditor/editor@latest/dist/index.js"></script>
 </head>
 <body>
 <form class="layui-form" action="">
@@ -19,7 +22,11 @@
                 <div class="layui-form-item layui-form-text">
                     <label class="layui-form-label">问卷描述</label>
                     <div class="layui-input-block">
-                        <textarea placeholder="请输入问卷描述" name="description" class="layui-textarea"></textarea>
+                        <!-- 富文本编辑器工具栏与容器 -->
+                        <div id="desc-toolbar" style="border:1px solid #e2e2e2; border-bottom:none; background:#fafafa"></div>
+                        <div id="desc-editor" style="border:1px solid #e2e2e2; min-height:260px;"></div>
+                        <!-- 提交隐藏字段，与后端字段名一致 -->
+                        <input type="hidden" id="description-hidden" name="description">
                     </div>
                 </div>
                 <div class="layui-form-item">
@@ -103,6 +110,28 @@
     let form = layui.form
     let $ = layui.jquery
     let laydate = layui.laydate
+    const { createEditor, createToolbar } = window.wangEditor
+
+    // 初始化富文本编辑器（问卷描述）
+    const descEditor = createEditor({
+      selector: '#desc-editor',
+      html: '',
+      config: {
+        placeholder: '请输入问卷描述...',
+        onChange(editor) {
+          document.getElementById('description-hidden').value = editor.getHtml()
+        },
+        MENU_CONF: {
+          uploadImage: {
+            server: '/system/notice/upload_image',
+            fieldName: 'editorImage',
+            maxFileSize: 5 * 1024 * 1024,
+            allowedFileTypes: ['image/jpeg','image/png','image/webp','image/gif']
+          }
+        }
+      }
+    })
+    createToolbar({ editor: descEditor, selector: '#desc-toolbar' })
 
     // 初始化时间选择器
     laydate.render({
@@ -120,6 +149,12 @@
     })
 
     form.on('submit(questionnaire-save)', function (data) {
+      // 提交前同步富文本内容并校验
+      data.field.description = descEditor.getHtml()
+      if (!data.field.description || data.field.description.replace(/\s|<p><br><\/p>/g, '') === '') {
+        layer.msg('请输入问卷描述', { icon: 2, time: 1000 })
+        return false
+      }
       $.ajax({
         url: '/system/questionnaire/save',
         data: JSON.stringify(data.field),

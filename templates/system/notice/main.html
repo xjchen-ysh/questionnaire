@@ -168,7 +168,7 @@
           [
             { type: "checkbox", fixed: "left" },
             { field: "id", title: "ID", width: 80, sort: true },
-            { field: "title", title: "须知标题", width: 200 },
+            { field: "title", title: "须知标题", minWidth: 200 },
             {
               field: "notice_type",
               title: "类型",
@@ -182,13 +182,13 @@
               width: 100,
               templet: "#notice-status",
             },
-            // {field: 'is_required', title: '是否必读', width: 120, templet: '#notice-required'},
+            // {field: 'is_required', title: '是否必读', minWidth: 120, templet: '#notice-required'},
             { field: "effective_date", title: "生效日期", width: 160 },
             { field: "create_at", title: "创建时间", width: 160 },
             {
               title: "操作",
               toolbar: "#notice-bar",
-              width: 240,
+              minWidth: 240,
               fixed: "right",
             },
           ],

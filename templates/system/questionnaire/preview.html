@@ -38,9 +38,36 @@
             font-size: 16px;
             opacity: 0.9;
             line-height: 1.5;
+            width: 100%;
+            max-width: 100%;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+        /* 限制富文本内元素不超出容器宽度 */
+        .questionnaire-description img,
+        .questionnaire-description video,
+        .questionnaire-description iframe,
+        .questionnaire-description canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* 代码与预格式化文本换行避免横向溢出 */
+        .questionnaire-description pre,
+        .questionnaire-description code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        /* 表格固定布局并限制宽度 */
+        .questionnaire-description table {
+            width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
         }
         .questionnaire-content {
             padding: 30px;
+            overflow-x: hidden; /* 防止子元素横向溢出页面 */
         }
         .question-item {
             margin-bottom: 30px;
@@ -149,7 +176,9 @@
             <div class="questionnaire-header">
                 <div class="questionnaire-title">{{ questionnaire.title }}</div>
                 {% if questionnaire.description %}
-                <div class="questionnaire-description">{{ questionnaire.description }}</div>
+                <!-- 采用 JSON 安全注入，避免富文本直接拼接导致实体未解码或破坏 DOM -->
+                <div id="questionnaire-description" class="questionnaire-description"></div>
+                <script type="application/json" id="desc-initial-json">{{ questionnaire.description | tojson | safe }}</script>
                 {% endif %}
             </div>
 
@@ -290,6 +319,31 @@
     <!-- 显示规则映射（由后端传入） -->
     <script>
         window.__showRules__ = {{ rules_map | tojson }};
+    </script>
+
+    <!-- 预览页富文本描述解码并渲染到容器 -->
+    <script>
+        (function () {
+            try {
+                var jsonEl = document.getElementById('desc-initial-json');
+                if (jsonEl) {
+                    var raw = JSON.parse(jsonEl.textContent || '""');
+                    if (typeof raw === 'string') {
+                        // 将 HTML 实体解码为真实字符（如 &lt;h2&gt; => <h2>）
+                        var tmp = document.createElement('div');
+                        tmp.innerHTML = raw;
+                        var unescaped = tmp.textContent || tmp.innerText || raw;
+                        var container = document.getElementById('questionnaire-description');
+                        if (container) {
+                            // 设置为 innerHTML，让标签按正常 HTML 解析渲染
+                            container.innerHTML = unescaped;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Preview description decode failed:', e);
+            }
+        })();
     </script>
 
     <script>

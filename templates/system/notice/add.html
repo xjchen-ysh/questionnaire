@@ -3,6 +3,9 @@
 <head>
     <title>用户须知管理</title>
     {% include 'system/common/header.html' %}
+    <!-- wangEditor v5 样式与脚本（CDN） -->
+    <link rel="stylesheet" href="https://unpkg.com/@wangeditor/editor@latest/dist/css/style.css">
+    <script src="https://unpkg.com/@wangeditor/editor@latest/dist/index.js"></script>
 </head>
 <body>
 <form class="layui-form" action="">
@@ -19,7 +22,11 @@
                 <div class="layui-form-item layui-form-text">
                     <label class="layui-form-label">须知内容</label>
                     <div class="layui-input-block">
-                        <textarea placeholder="请输入须知内容" name="content" lay-verify="required" class="layui-textarea" rows="8"></textarea>
+                        <!-- 富文本编辑器容器与工具栏 -->
+                        <div id="notice-toolbar" style="border:1px solid #e2e2e2; border-bottom:none; background:#fafafa"></div>
+                        <div id="notice-editor" style="border:1px solid #e2e2e2; min-height:260px;"></div>
+                        <!-- 提交用隐藏字段（与后端字段名保持一致） -->
+                        <input type="hidden" id="content-hidden" name="content">
                     </div>
                 </div>
                 <div class="layui-form-item">
@@ -86,6 +93,29 @@
     let form = layui.form
     let $ = layui.jquery
     let laydate = layui.laydate
+    const { createEditor, createToolbar } = window.wangEditor
+
+    // 初始化 wangEditor
+    const editor = createEditor({
+      selector: '#notice-editor',
+      html: '',
+      config: {
+        placeholder: '请输入须知内容...',
+        onChange(editor) {
+          // 同步内容到隐藏字段，便于表单校验与提交
+          document.getElementById('content-hidden').value = editor.getHtml()
+        },
+        MENU_CONF: {
+          uploadImage: {
+            server: '/system/notice/upload_image',
+            fieldName: 'editorImage',
+            maxFileSize: 5 * 1024 * 1024,
+            allowedFileTypes: ['image/jpeg','image/png','image/webp','image/gif'],
+          }
+        }
+      }
+    })
+    createToolbar({ editor, selector: '#notice-toolbar' })
 
     // 初始化时间选择器
     laydate.render({
@@ -102,6 +132,12 @@
     })
 
     form.on('submit(notice-save)', function (data) {
+      // 在提交前，确保已同步富文本内容
+      data.field.content = editor.getHtml()
+      if (!data.field.content || data.field.content.replace(/\s|<p><br><\/p>/g, '') === '') {
+        layer.msg('请输入须知内容', { icon: 2, time: 1000 })
+        return false
+      }
       $.ajax({
         url: '/system/notice/save',
         data: JSON.stringify(data.field),

@@ -91,6 +91,10 @@
                   </div>
                   <div class="question-actions">
                     <n-button size="small" @click="editQuestionToggle(question.id)">显示设置</n-button>
+                    <n-space align="center" size="small" style="margin-left: 8px;">
+                      <n-text depth="3">是否展示上传</n-text>
+                      <n-switch :value="!!question.allow_upload" size="small" @update:value="(val)=>toggleUpload(question.id, val)" />
+                    </n-space>
                     <n-button size="small" @click="editQuestion(question.id)">
                       <template #icon>
                         <n-icon>
@@ -206,6 +210,7 @@
         NText,
         NTag,
         NButton,
+        NSwitch,
         NEmpty,
         NMessageProvider,
         createDiscreteApi,
@@ -378,6 +383,28 @@
             }
           };
 
+          // 切换是否展示上传
+          const toggleUpload = async (questionId, allow) => {
+            try {
+              const resp = await fetch(`/system/questionnaire/question/allow_upload/${questionId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ allow_upload: !!allow })
+              });
+              const result = await resp.json();
+              if (result.success) {
+                // 更新本地状态
+                const q = questions.value.find(q => q.id === questionId);
+                if (q) q.allow_upload = !!allow;
+                message.success('上传显示设置已保存');
+              } else {
+                message.error(result.msg || '保存失败');
+              }
+            } catch (e) {
+              message.error('网络错误，保存失败');
+            }
+          };
+
           // 保存设计
           const saveDesign = () => {
             message.success("设计已保存");
@@ -494,6 +521,7 @@
             addQuestion,
             editQuestion,
             editQuestionToggle,
+            toggleUpload,
             deleteQuestion,
             previewQuestionnaire,
             saveDesign,

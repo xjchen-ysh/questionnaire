@@ -3,6 +3,9 @@
 <head>
     <title>问卷编辑</title>
     {% include 'system/common/header.html' %}
+    <!-- wangEditor v5 样式与脚本（CDN） -->
+    <link rel="stylesheet" href="https://unpkg.com/@wangeditor/editor@latest/dist/css/style.css">
+    <script src="https://unpkg.com/@wangeditor/editor@latest/dist/index.js"></script>
 </head>
 <body>
 <form class="layui-form" action="">
@@ -26,8 +29,13 @@
                 <div class="layui-form-item layui-form-text">
                     <label class="layui-form-label">问卷描述</label>
                     <div class="layui-input-block">
-                        <textarea placeholder="请输入问卷描述" name="description"
-                                  class="layui-textarea">{{ questionnaire.description }}</textarea>
+                        <!-- 富文本编辑器工具栏与容器 -->
+                        <div id="desc-toolbar" style="border:1px solid #e2e2e2; border-bottom:none; background:#fafafa"></div>
+                        <div id="desc-editor" style="border:1px solid #e2e2e2; min-height:260px;"></div>
+                        <!-- 初始内容采用JSON安全注入，避免HTML破坏DOM导致内容渲染到编辑器外 -->
+                        <script type="application/json" id="desc-initial-json">{{ questionnaire.description | tojson | safe }}</script>
+                        <!-- 提交隐藏字段，与后端字段名一致 -->
+                        <input type="hidden" id="description-hidden" name="description">
                     </div>
                 </div>
                 <div class="layui-form-item">
@@ -115,6 +123,52 @@
     let form = layui.form
     let $ = layui.jquery
     let laydate = layui.laydate
+    const { createEditor, createToolbar } = window.wangEditor
+    
+    // 初始化富文本编辑器
+    const descEditor = createEditor({
+      selector: '#desc-editor',
+      html: '',
+      config: {
+        placeholder: '请输入问卷描述...',
+        onChange(editor) {
+          document.getElementById('description-hidden').value = editor.getHtml()
+        },
+        MENU_CONF: {
+          uploadImage: {
+            server: '/system/notice/upload_image',
+            fieldName: 'editorImage',
+            maxFileSize: 5 * 1024 * 1024,
+            allowedFileTypes: ['image/jpeg','image/png','image/webp','image/gif']
+          }
+        }
+      }
+    })
+    createToolbar({ editor: descEditor, selector: '#desc-toolbar' })
+    // 加载初始内容（从JSON节点安全解析，避免HTML溢出到编辑器外）
+    try {
+      const jsonNode = document.getElementById('desc-initial-json')
+      let initHtml = ''
+      if (jsonNode) {
+        initHtml = JSON.parse(jsonNode.textContent || '""')
+      }
+      // 将可能的HTML实体（例如 &lt;h2&gt;）解码为真实HTML
+      const decodeHtmlEntities = (str) => {
+        if (!str) return ''
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(str, 'text/html')
+        // textContent 会将实体转为字符，得到包含 <tag> 的字符串
+        return doc.documentElement.textContent || str
+      }
+      const decoded = decodeHtmlEntities(initHtml)
+      if (initHtml) {
+        // 使用解码后的HTML作为初始内容，避免显示为纯文本标签
+        descEditor.setHtml(decoded)
+        document.getElementById('description-hidden').value = descEditor.getHtml()
+      }
+    } catch (e) {
+      console.warn('init description setHtml failed', e)
+    }
 
     // 初始化时间选择器
     // 获取HTML中已有的时间值，如果没有则使用默认值
@@ -136,6 +190,12 @@
     })
 
     form.on('submit(questionnaire-update)', function (data) {
+      // 提交前同步富文本内容并校验
+      data.field.description = descEditor.getHtml()
+      if (!data.field.description || data.field.description.replace(/\s|<p><br><\/p>/g, '') === '') {
+        layer.msg('请输入问卷描述', { icon: 2, time: 1000 })
+        return false
+      }
       // 处理复选框数据
       data.field.allow_anonymous = data.field.allow_anonymous ? true : false
       data.field.require_login = data.field.require_login ? true : false

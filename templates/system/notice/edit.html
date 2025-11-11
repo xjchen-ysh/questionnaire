@@ -3,6 +3,8 @@
 <head>
     <title>用户须知管理</title>
     {% include 'system/common/header.html' %}
+    <!-- wangEditor v5 样式（CDN） -->
+    <link rel="stylesheet" href="https://unpkg.com/@wangeditor/editor/dist/css/style.css">
 </head>
 <body>
 <form class="layui-form" action="">
@@ -22,7 +24,13 @@
                 <div class="layui-form-item layui-form-text">
                     <label class="layui-form-label">须知内容</label>
                     <div class="layui-input-block">
-                        <textarea placeholder="请输入须知内容" name="content" lay-verify="required" class="layui-textarea" rows="8">{{ notice.content }}</textarea>
+                        <!-- wangEditor 容器 -->
+                        <div id="toolbar-container" style="border: 1px solid #e6e6e6; border-bottom: none; background: #fafafa;"></div>
+                        <div id="editor-container" style="border: 1px solid #e6e6e6; min-height: 260px; padding: 12px; background: #fff;"></div>
+                        <!-- 隐藏字段用于表单提交（初次不回填，避免HTML溢出到编辑器外） -->
+                        <input type="hidden" name="content" id="content-hidden" value="">
+                        <!-- 以JSON安全注入初始HTML，避免破坏DOM结构 -->
+                        <script type="application/json" id="notice-initial-content">{{ notice.content | tojson | safe }}</script>
                     </div>
                 </div>
                 <div class="layui-form-item">
@@ -85,6 +93,8 @@
     </div>
 </form>
 {% include 'system/common/footer.html' %}
+<!-- wangEditor v5 脚本（CDN） -->
+<script src="https://unpkg.com/@wangeditor/editor/dist/index.js"></script>
 <script>
   layui.use(['form', 'jquery', 'laydate'], function () {
     let form = layui.form
@@ -104,7 +114,61 @@
       format: 'yyyy-MM-dd HH:mm:ss'
     })
 
+    // 初始化 wangEditor
+    const { createEditor, createToolbar } = window.wangEditor || {}
+    let editor
+    if (createEditor && createToolbar) {
+      const editorConfig = {
+        placeholder: '请输入须知内容...',
+        MENU_CONF: {
+          uploadImage: {
+            server: '/system/notice/upload_image',
+            fieldName: 'file',
+            maxFileSize: 5 * 1024 * 1024, // 5MB
+            maxNumberOfFiles: 10,
+            allowedFileTypes: ['image/*'],
+            onProgress(progress) { console.log('upload progress', progress) },
+            onSuccess(file, res) { console.log('upload success', file.name, res) },
+            onFailed(file, res) { console.warn('upload failed', file.name, res) },
+            onError(file, err, res) { console.error('upload error', file.name, err, res) },
+          }
+        }
+      }
+
+      editor = createEditor({
+        selector: '#editor-container',
+        config: editorConfig,
+        mode: 'default'
+      })
+
+      // 初始化时写入已有内容（从JSON节点安全解析）
+      try {
+        let initialHtml = ''
+        const jsonNode = document.getElementById('notice-initial-content')
+        if (jsonNode) {
+          initialHtml = JSON.parse(jsonNode.textContent || '""')
+        }
+        if (initialHtml) editor.setHtml(initialHtml)
+      } catch (e) { console.warn('setHtml init failed', e) }
+
+      // 工具栏
+      createToolbar({
+        editor,
+        selector: '#toolbar-container',
+        mode: 'default'
+      })
+    }
+
     form.on('submit(notice-update)', function (data) {
+      // 读取编辑器内容到隐藏字段
+      try {
+        if (editor) {
+          const html = editor.getHtml()
+          $('#content-hidden').val(html)
+          data.field.content = html
+        }
+      } catch (e) { console.warn('getHtml failed', e) }
+
       $.ajax({
         url: '/system/notice/update',
         data: JSON.stringify(data.field),

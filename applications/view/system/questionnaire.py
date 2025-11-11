@@ -422,6 +422,30 @@ def question_show_rule_save(question_id):
     return success_api(msg="显示规则已保存")
 
 
+@bp.post("/question/allow_upload/<int:question_id>")
+@authorize("system:questionnaire:edit", log=True)
+def question_allow_upload(question_id):
+    """设置问题的图片上传显示开关
+    请求体: { "allow_upload": true/false }
+    存储于 Question.config["allow_upload"]
+    """
+    data = request.get_json(force=True) or {}
+    allow = data.get("allow_upload")
+
+    if allow is None:
+        return fail_api(msg="缺少allow_upload参数")
+
+    question = Question.query.get(question_id)
+    if not question:
+        return fail_api(msg="问题不存在")
+
+    cfg = dict(question.config or {})
+    cfg["allow_upload"] = bool(allow)
+    question.config = cfg
+    db.session.commit()
+    return success_api(msg="上传显示开关已更新")
+
+
 @bp.post("/question/save")
 @authorize("system:questionnaire:edit", log=True)
 def question_save():
@@ -439,11 +463,11 @@ def question_save():
     if not all([questionnaire_id, title, question_type]):
         return fail_api(msg="请填写完整信息")
 
-    # 设置问题配置
-    config = None
+    # 设置问题配置（默认允许上传图片）
+    config = {"allow_upload": False}
     if question_type == "rating":
         # 评分题默认配置
-        config = {"max_rating": 5, "min_rating": 1}
+        config.update({"max_rating": 5, "min_rating": 1})
 
     # 创建问题
     question = Question(
@@ -497,11 +521,12 @@ def question_update():
     if not question:
         return fail_api(msg="问题不存在")
 
-    # 设置问题配置
-    config = None
+    # 设置问题配置：在原有配置基础上更新，避免覆盖自定义键（如allow_upload）
+    existing_config = question.config or {}
+    config = dict(existing_config)
     if question_type == "rating" and not options:
         # 评分题默认配置
-        config = {"max_rating": 5, "min_rating": 1}
+        config.update({"max_rating": 5, "min_rating": 1})
 
     # 更新问题信息
     question.title = title
@@ -604,6 +629,7 @@ def questions(questionnaire_id):
             "type_text": question.type_text,
             "is_required": question.is_required,
             "sort_order": question.sort_order,
+            "allow_upload": bool((question.config or {}).get("allow_upload", False)),
             "options": [],
         }
 
@@ -642,9 +668,10 @@ def question_detail(question_id):
         "type_text": question.type_text,
         "is_required": question.is_required,
         "sort_order": question.sort_order,
+        "allow_upload": bool((question.config or {}).get("allow_upload", False)),
         "options": [],
     }
-
+    
     # 如果是选择题，获取选项
     if question.has_options:
         options = question.get_options_list()
