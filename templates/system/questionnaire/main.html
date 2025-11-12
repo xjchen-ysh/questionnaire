@@ -205,7 +205,13 @@
     {{# if(d.status == 0){ }}
         <span class="layui-badge layui-bg-gray">草稿</span>
     {{# } else if(d.status == 1){ }}
+    {% endraw %}
+    {% if authorize("system:questionnaire:edit") %}
+        <span class="layui-badge layui-bg-green" lay-event="draft">发布</span>
+    {% else %}
         <span class="layui-badge layui-bg-green">发布</span>
+    {% endif %}
+    {% raw %}
     {{# } else if(d.status == 2){ }}
         <span class="layui-badge layui-bg-orange">停止</span>
     {{# } else if(d.status == 3){ }}
@@ -341,6 +347,8 @@
                 window.design(obj)
             } else if (obj.event === 'publish') {
                 window.publish(obj)
+            } else if (obj.event === 'draft') {
+                window.draft(obj)
             } else if (obj.event === 'preview') {
                 window.preview(obj)
             } else if (obj.event === 'share') {
@@ -465,6 +473,32 @@
                     error: function () {
                         layer.close(loading)
                         popup.failure('发布失败，请稍后重试')
+                    }
+                })
+            })
+        }
+
+        window.draft = function (obj) {
+            layer.confirm('确定将该问卷改为草稿状态吗？草稿状态下不可填写。', {icon: 3, title: '草稿确认'}, function (index) {
+                layer.close(index)
+                let loading = layer.load()
+                $.ajax({
+                    url: MODULE_PATH + 'draft/' + obj.data['id'],
+                    dataType: 'json',
+                    type: 'post',
+                    success: function (result) {
+                        layer.close(loading)
+                        if (result.success) {
+                            popup.success(result.msg, function () {
+                                window.refresh()
+                            })
+                        } else {
+                            popup.failure(result.msg)
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading)
+                        popup.failure('修改草稿失败，请稍后重试')
                     }
                 })
             })

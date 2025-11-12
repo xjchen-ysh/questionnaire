@@ -258,6 +258,28 @@ def update():
     return success_api(msg="更新成功")
 
 
+# 将问卷改为草稿状态
+@bp.post("/draft/<int:questionnaire_id>")
+@authorize("system:questionnaire:edit", log=True)
+def draft(questionnaire_id):
+    if not questionnaire_id:
+        return fail_api(msg="问卷ID不能为空")
+    questionnaire = Questionnaire.query.get(questionnaire_id)
+    if not questionnaire:
+        return fail_api(msg="问卷不存在")
+    if questionnaire.status == 0:
+        return fail_api(msg="问卷已是草稿状态")
+    try:
+        questionnaire.status = 0
+        questionnaire.is_published = False
+        questionnaire.update_at = datetime.now()
+        db.session.commit()
+        return success_api(msg="已修改为草稿状态")
+    except Exception as e:
+        db.session.rollback()
+        return fail_api(msg=f"修改草稿失败：{str(e)}")
+
+
 @bp.delete("/remove/<int:_id>")
 @authorize("system:questionnaire:remove", log=True)
 def remove(_id):

@@ -127,7 +127,13 @@
       {{# if(d.status == 0){ }}
       <span class="layui-badge layui-bg-gray">禁用</span>
       {{# } else if(d.status == 1){ }}
+    {% endraw %}
+    {% if authorize("system:notice:edit") %}
+      <span class="layui-badge layui-bg-green" lay-event="disable">启用</span>
+    {% else %}
       <span class="layui-badge layui-bg-green">启用</span>
+    {% endif %}
+    {% raw %}
       {{# } else if(d.status == 2){ }}
       <span class="layui-badge layui-bg-blue">归档</span>
       {{# } }}
@@ -256,6 +262,25 @@
                     layer.msg(result.msg, { icon: 2, time: 1000 });
                     table.reload("notice-table");
                   },
+                });
+                layer.close(index);
+              }
+            );
+          } else if (obj.event === "disable") {
+            layer.confirm(
+              "确定将该须知从启用修改为禁用吗？",
+              { icon: 3, title: "提示" },
+              function (index) {
+                $.ajax({
+                  url: '{{ url_for("system.notice.change_status") }}',
+                  data: JSON.stringify({ id: data.id, status: 0 }),
+                  dataType: "json",
+                  contentType: "application/json",
+                  type: "post",
+                  success: function (result) {
+                    layer.msg(result.msg || "状态已更新", { icon: 1, time: 1000 });
+                    table.reload("notice-table");
+                  }
                 });
                 layer.close(index);
               }

@@ -443,3 +443,22 @@ def confirm_detail(confirm_id):
     if not confirm:
         return render_template("system/error/404.html")
     return render_template("system/notice/confirm_detail.html", confirm=confirm)
+
+
+@bp.post("/change_status")
+@authorize("system:notice:edit", log=True)
+def change_status():
+    req_json = request.get_json(force=True)
+    notice_id = req_json.get("id")
+    status = req_json.get("status")
+    if notice_id is None:
+        return fail_api(msg="须知ID不能为空")
+    if status not in (0, 1, 2):
+        return fail_api(msg="状态参数不合法")
+    notice = UserNotice.query.get(notice_id)
+    if not notice:
+        return fail_api(msg="须知不存在")
+    notice.status = status
+    notice.update_at = datetime.now()
+    db.session.commit()
+    return success_api(msg="状态更新成功")
