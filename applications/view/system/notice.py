@@ -278,7 +278,7 @@ def remove():
 
 
 @bp.get("/confirm/data")
-@authorize("system:notice:confirm:main", log=True)
+@authorize("system:notice:main", log=True)
 def confirm_data():
     """确认记录查询接口"""
     # 获取查询参数
@@ -333,7 +333,7 @@ def confirm_data():
 
 
 @bp.get("/confirm/export")
-@authorize("system:notice:confirm:export", log=True)
+@authorize("system:notice:export", log=True)
 def confirm_export():
     """确认记录导出接口"""
     import pandas as pd
@@ -429,20 +429,35 @@ def detail(notice_id):
 
 
 @bp.get("/confirm/main")
-@authorize("system:notice:confirm:main", log=True)
+@authorize("system:notice:main", log=True)
 def confirm_main():
     """确认记录管理页面"""
     return render_template("system/notice/confirm_main.html")
 
 
 @bp.get("/confirm/detail/<int:confirm_id>")
-@authorize("system:notice:confirm:main", log=True)
+@authorize("system:notice:main", log=True)
 def confirm_detail(confirm_id):
     """确认记录详情页面"""
     confirm = UserNoticeConfirm.query.get(confirm_id)
     if not confirm:
         return render_template("system/error/404.html")
     return render_template("system/notice/confirm_detail.html", confirm=confirm)
+
+
+@bp.post("/confirm/remove")
+@authorize("system:notice:main", log=True)
+def confirm_remove():
+    data = request.get_json(force=True) or {}
+    confirm_id = data.get("id")
+    if not confirm_id:
+        return fail_api(msg="记录ID不能为空")
+    confirm = UserNoticeConfirm.query.get(confirm_id)
+    if not confirm:
+        return fail_api(msg="记录不存在")
+    db.session.delete(confirm)
+    db.session.commit()
+    return success_api(msg="删除成功")
 
 
 @bp.post("/change_status")
