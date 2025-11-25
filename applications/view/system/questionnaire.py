@@ -1165,6 +1165,23 @@ def response_export(questionnaire_id):
     return response
 
 
+@bp.post("/response_remove")
+@authorize("system:questionnaire:main", log=True)
+def response_remove():
+    data = request.get_json(force=True) or {}
+    response_id = data.get("id")
+    if not response_id:
+        return fail_api(msg="记录ID不能为空")
+    resp = QuestionnaireResponse.query.get(response_id)
+    if not resp:
+        return fail_api(msg="记录不存在")
+    from applications.models.questionnaire_response import QuestionAnswer
+    QuestionAnswer.query.filter_by(response_id=response_id).delete()
+    db.session.delete(resp)
+    db.session.commit()
+    return success_api(msg="删除成功")
+
+
 @bp.get("/response_download/<int:response_id>")
 @authorize("system:questionnaire:main", log=True)
 def response_download(response_id):

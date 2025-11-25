@@ -78,15 +78,18 @@
 {# 行操作按钮 #}
 <script type="text/html" id="response-bar">
     <button class="pear-btn pear-btn-info pear-btn-sm" lay-event="detail">
-        <i class="pear-icon pear-icon-eye"></i> 详情
+        详情
     </button>
     {% raw %}
         {{# if(d.status == 1){ }}
             <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="download">
-                <i class="pear-icon pear-icon-download"></i> 下载
+                下载
             </button>
         {{# } }}
     {% endraw %}
+    <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove">
+         删除
+    </button>
 </script>
 
 {# 状态显示模板 #}
@@ -139,6 +142,7 @@ layui.use(['table', 'form', 'layer', 'laydate'], function () {
     let form = layui.form;
     let layer = layui.layer;
     let laydate = layui.laydate;
+    var $ = layui.jquery;
 
     // 初始化日期选择器
     laydate.render({
@@ -167,7 +171,7 @@ layui.use(['table', 'form', 'layer', 'laydate'], function () {
             {field: 'start_time', title: '开始时间', width: 160, sort: true},
             {field: 'submit_time', title: '提交时间', width: 160, sort: true},
             {field: 'duration', title: '用时', width: 100, templet: '#duration-display'},
-            {title: '操作', toolbar: '#response-bar', width: 180, fixed: 'right'}
+            {title: '操作', toolbar: '#response-bar', width: 240, fixed: 'right'}
         ]
     ];
 
@@ -233,6 +237,25 @@ layui.use(['table', 'form', 'layer', 'laydate'], function () {
         } else if (obj.event === 'download') {
             // 下载单个记录
             window.open('/system/questionnaire/response_download/' + obj.data.id, '_blank');
+        } else if (obj.event === 'remove') {
+            layer.confirm('确定要删除该记录吗？', {icon: 3, title: '提示'}, function (index) {
+                $.ajax({
+                    url: '/system/questionnaire/response_remove',
+                    data: JSON.stringify({ id: obj.data.id }),
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    type: 'post',
+                    success: function (result) {
+                        if (result.success) {
+                            layer.msg(result.msg, {icon: 1, time: 1000});
+                        } else {
+                            layer.msg(result.msg || '删除失败', {icon: 2, time: 1500});
+                        }
+                        table.reload('response-table');
+                    }
+                });
+                layer.close(index);
+            });
         }
     });
 
